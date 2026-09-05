@@ -2,6 +2,8 @@ const TILE_SIZE = 64;
 const MOVE_FRAMES = 12;
 const SPRITE_FRAMES = 4;
 const MONSTER_MOVE_INTERVAL = 650;
+const PLAYER_SPEED_PX = 160;
+const MONSTER_SPEED_PX = 96;
 const SPRITE_FOLDER = "images/";
 const TILE = { FLOOR: 0, WALL: 1, KEY: 2, LOCKED_DOOR: 3, EXIT: 4, OPEN_DOOR: 5, STAIRS: 6 };
 const DIRECTIONS = [
@@ -57,8 +59,8 @@ export class EscapeGame {
     this.map = INITIAL_MAP.map((row) => [...row]);
     this.map[KEY_POSITION.y][KEY_POSITION.x] = TILE.KEY;
     this.map[EXIT_POSITION.y][EXIT_POSITION.x] = TILE.EXIT;
-    this.player = this.createActor(SPAWN.x, SPAWN.y, "S");
-    this.monster = { ...this.createActor(MONSTER_SPAWN.x, MONSTER_SPAWN.y, "S"), active: true, nextMoveAt: 1000 };
+    this.player = this.createActor(SPAWN.x, SPAWN.y, "S", PLAYER_SPEED_PX);
+    this.monster = { ...this.createActor(MONSTER_SPAWN.x, MONSTER_SPAWN.y, "S", MONSTER_SPEED_PX), active: true, nextMoveAt: 1000 };
     this.inventory = [];
     this.heldDirections = new Set();
     this.ended = false;
@@ -158,7 +160,7 @@ export class EscapeGame {
     while (parents.get(stepKey) !== startKey && parents.get(stepKey) !== null) stepKey = parents.get(stepKey);
     if (stepKey !== startKey) {
       const [x, y] = stepKey.split(",").map(Number);
-      this.startActorMove(this.monster, x, y, p.frameCount);
+      this.startActorMove(this.monster, x, y);
     }
   }
 
@@ -175,54 +177,83 @@ export class EscapeGame {
   handleKeyReleased(key) { this.heldDirections.delete(key); }
 
   processHeldMovement(p) {
-    if (this.ended || this.player.isMoving || this.heldDirections.size === 0) return;
-    const key = Array.from(this.heldDirections).at(-1);
-    const direction = DIRECTIONS.find((item) => item.key === key);
-    if (direction) this.movePlayer(p, direction);
+  if (this.ended) return;
+
+  // 아무 키도 누르고 있지 않으면 즉시 정지
+  if (this.heldDirections.size === 0) {
+    return;
   }
+
+  // 이동 중이면 현재 칸 이동이 끝날 때까지 기다림
+  if (this.player.isMoving) {
+    return;
+  }
+
+  // 가장 최근에 누른 방향을 사용
+  const key = Array.from(this.heldDirections).at(-1);
+
+  const direction = DIRECTIONS.find(
+    (item) => item.key === key
+  );
+
+  if (direction) {
+    this.movePlayer(p, direction);
+  }
+}
 
   movePlayer(p, direction) {
-    if (this.player.isMoving) return;
-    this.player.direction = direction.sprite;
-    const x = this.player.x + direction.x; const y = this.player.y + direction.y;
-    if (!this.isPlayerWalkable(x, y)) return;
-    this.startActorMove(this.player, x, y, p.frameCount);
+  if (this.ended) return;
+
+  // 현재 이동 중이면 새로운 이동 명령을 넣지 않음
+  if (this.player.isMoving) {
+    return;
   }
 
-  interact() {
-    if (this.getTile(this.player.x, this.player.y) === TILE.KEY) {
-      this.inventory.push("key");
-      this.map[this.player.y][this.player.x] = TILE.FLOOR;
-      this.message = "열쇠를 획득했습니다. 잠긴 문을 열 수 있습니다.";
-      return;
-    }
-    const direction = DIRECTIONS.find((item) => item.sprite === this.player.direction);
-    const x = this.player.x + direction.x; const y = this.player.y + direction.y;
-    if (this.getTile(x, y) !== TILE.LOCKED_DOOR) { this.message = "조사할 수 있는 것이 없습니다."; return; }
-    if (!this.inventory.includes("key")) { this.message = "문이 잠겨 있습니다. 열쇠가 필요합니다."; return; }
-    this.map[y][x] = TILE.OPEN_DOOR;
-    this.monster.active = true;
-    this.monster.nextMoveAt = this.sketch.millis() + MONSTER_MOVE_INTERVAL;
-    this.message = "문이 열렸습니다. 아오오니가 BFS 최단 경로로 추격합니다!";
+  // 바라보는 방향 변경
+  this.player.direction = direction.sprite;
+
+  const nextX = this.player.x + direction.x;
+  const nextY = this.player.y + direction.y;
+
+  // 벽 / 잠긴 문이면 이동하지 않음
+  if (!this.isPlayerWalkable(nextX, nextY)) {
+    return;
   }
+
+  // 한 칸 이동 시작
+  this.startActorMove(
+    this.player,
+    nextX,
+    nextY
+  );
+}
 
   getTile(x, y) { return this.map[y]?.[x]; }
-  createActor(x, y, direction) { return { x, y, renderX: x, renderY: y, fromX: x, fromY: y, direction, moveStartFrame: 0, isMoving: false }; }
-  startActorMove(actor, x, y, frameCount) {
-    actor.fromX = actor.renderX; actor.fromY = actor.renderY;
-    actor.x = x; actor.y = y; actor.moveStartFrame = frameCount; actor.isMoving = true;
+  createActor(x, y, direction, speed) {
+    return { x, y, targetX: x, targetY: y, px: x * TILE_SIZE, py: y * TILE_SIZE, targetPx: x * TILE_SIZE, targetPy: y * TILE_SIZE, direction, speed, animationMs: 0, isMoving: false };
+  }
+  startActorMove(actor, x, y) {
+    actor.targetX = x; actor.targetY = y;
+    actor.targetPx = x * TILE_SIZE; actor.targetPy = y * TILE_SIZE;
+    actor.animationMs = 0; actor.isMoving = true;
   }
   updateActorAnimation(p, actor) {
-    if (!actor.isMoving) return { x: actor.x, y: actor.y, frame: 0 };
-    const progress = Math.min((p.frameCount - actor.moveStartFrame) / MOVE_FRAMES, 1);
-    const eased = progress * progress * (3 - 2 * progress);
-    actor.renderX = p.lerp(actor.fromX, actor.x, eased);
-    actor.renderY = p.lerp(actor.fromY, actor.y, eased);
-    if (progress === 1) {
-      actor.isMoving = false; actor.renderX = actor.x; actor.renderY = actor.y;
+    if (!actor.isMoving) return { x: actor.px / TILE_SIZE, y: actor.py / TILE_SIZE, frame: 0 };
+    const elapsedMs = Math.min(p.deltaTime, 50);
+    const dx = actor.targetPx - actor.px; const dy = actor.targetPy - actor.py;
+    const distance = Math.hypot(dx, dy);
+    const distanceThisFrame = actor.speed * elapsedMs / 1000;
+    actor.animationMs += elapsedMs;
+    if (distance <= distanceThisFrame) {
+      actor.px = actor.targetPx; actor.py = actor.targetPy;
+      actor.x = actor.targetX; actor.y = actor.targetY; actor.isMoving = false;
       if (actor === this.player) this.onPlayerArrive(p);
+    } else {
+      actor.px += dx / distance * distanceThisFrame;
+      actor.py += dy / distance * distanceThisFrame;
     }
-    return { x: actor.renderX, y: actor.renderY, frame: Math.min(MOVE_FRAMES - 1, Math.floor(progress * MOVE_FRAMES)) };
+    const frame = Math.floor((actor.animationMs / (400 / MOVE_FRAMES)) % MOVE_FRAMES);
+    return { x: actor.px / TILE_SIZE, y: actor.py / TILE_SIZE, frame };
   }
   getSprite(direction, frame) {
     const frames = this.sprites[direction] ?? [];
