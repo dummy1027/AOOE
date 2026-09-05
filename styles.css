@@ -2,15 +2,17 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; min-height: 100vh; display: grid; place-items: center; background: radial-gradient(circle at 50% 0%, #28203c 0, #101019 42%, #09090e 100%); }
 button, kbd { font: inherit; }
-.game-shell { width: min(100%, 760px); padding: 28px 20px; }
+.game-shell { width: 100%; min-height: 100vh; padding: 18px; display: grid; grid-template-rows: auto 1fr auto; }
 .game-header { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 14px; }
 .eyebrow { margin: 0 0 4px; color: #b6a8df; font-size: .72rem; font-weight: 700; letter-spacing: .12em; }
 h1 { margin: 0; font-size: clamp(1.45rem, 4vw, 2rem); }
+.header-actions { display: flex; gap: 8px; }
 button { cursor: pointer; border: 1px solid #8c79bd; border-radius: 8px; padding: 9px 13px; background: #241c36; color: inherit; font-weight: 700; }
 button:hover, button:focus-visible { background: #392957; outline: 2px solid #c4b4f0; outline-offset: 2px; }
-.game-frame { position: relative; overflow: hidden; border: 1px solid #4d4167; border-radius: 12px; background: #0a0a0f; box-shadow: 0 18px 55px rgb(0 0 0 / .45); }
-#game-canvas canvas { display: block; width: 100% !important; height: auto !important; image-rendering: pixelated; }
+.game-frame { position: relative; min-height: 0; overflow: hidden; border: 1px solid #4d4167; border-radius: 12px; background: #0a0a0f; box-shadow: 0 18px 55px rgb(0 0 0 / .45); }
+#game-canvas, #game-canvas canvas { width: 100%; height: 100%; }
+#game-canvas canvas { display: block; image-rendering: pixelated; }
 .game-status { position: absolute; top: 12px; right: 12px; padding: 6px 9px; border-radius: 6px; background: rgb(7 6 13 / .7); color: #f0c869; font-size: .8rem; pointer-events: none; }
 .instructions { display: flex; flex-wrap: wrap; gap: 10px 20px; padding: 14px 2px 0; color: #cbc5d9; font-size: .86rem; }
 kbd { display: inline-block; min-width: 1.55em; padding: 1px 5px; border: 1px solid #786a97; border-bottom-width: 2px; border-radius: 4px; text-align: center; color: #fff; background: #262131; }
-@media (max-width: 480px) { .game-shell { padding: 18px 12px; } .game-header { align-items: flex-start; } .game-header button { padding: 7px 9px; font-size: .82rem; } }
+@media (max-width: 480px) { .game-shell { padding: 12px; } .game-header { align-items: flex-start; } .game-header button { padding: 7px 9px; font-size: .82rem; } }
