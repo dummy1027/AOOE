@@ -2,10 +2,10 @@ const TILE_SIZE = 64;
 const MOVE_FRAMES = 12;
 const SPRITE_FRAMES = 4;
 
-const MONSTER_MOVE_INTERVAL = 650;
+const MONSTER_MOVE_INTERVAL = 180;
 
 const PLAYER_SPEED_PX = 365;
-const MONSTER_SPEED_PX = 96;
+const MONSTER_SPEED_PX = 170;
 
 const SPRITE_FOLDER = "images/";
 
@@ -134,9 +134,15 @@ export class EscapeGame {
 
   createSketch(p) {
     this.sprites = { A: [], D: [], S: [], W: [] };
+    this.monsterSprites = { A: [], D: [], S: [], W: [] };
     const loadSprite = (name) => p.loadImage(`${SPRITE_FOLDER}${name}`, undefined, () => { this.spriteLoadFailed = true; });
+    const monsterDirectionNames = { W: "up", A: "left", S: "down", D: "right" };
     p.preload = () => Object.keys(this.sprites).forEach((dir) => {
       this.sprites[dir] = Array.from({ length: SPRITE_FRAMES }, (_, index) => loadSprite(`${dir}${index + 1}.png`));
+      this.monsterSprites[dir] = Array.from(
+        { length: SPRITE_FRAMES },
+        (_, index) => loadSprite(`monster_${monsterDirectionNames[dir]}_${index + 1}.png`),
+      );
     });
     p.setup = () => { p.createCanvas(320, 320); p.frameRate(30); p.noSmooth(); p.textFont("sans-serif"); this.resizeCanvas(p); this.updateStatus(); };
     p.draw = () => this.draw(p);
@@ -344,11 +350,18 @@ export class EscapeGame {
       this.monster.nextMoveAt =
         p.millis() + MONSTER_MOVE_INTERVAL;
     }
-    const { x, y } = this.updateActorAnimation(p, this.monster);
+    const { x, y, frame } = this.updateActorAnimation(p, this.monster);
     const drawX = x * TILE_SIZE; const drawY = y * TILE_SIZE;
-    p.fill(116, 70, 212); p.noStroke(); p.rect(drawX + 7, drawY + 7, 50, 50, 10);
-    p.fill(235, 225, 255); p.circle(drawX + 23, drawY + 28, 11); p.circle(drawX + 42, drawY + 28, 11);
-    p.fill(25, 15, 45); p.circle(drawX + 23, drawY + 28, 5); p.circle(drawX + 42, drawY + 28, 5);
+    const image = this.getMonsterSprite(this.monster.direction, frame);
+    if (image?.width > 1 && image?.height > 1) {
+      p.imageMode(p.CENTER);
+      p.image(image, drawX + TILE_SIZE / 2, drawY + TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
+      p.imageMode(p.CORNER);
+    } else {
+      p.fill(116, 70, 212); p.noStroke(); p.rect(drawX + 7, drawY + 7, 50, 50, 10);
+      p.fill(235, 225, 255); p.circle(drawX + 23, drawY + 28, 11); p.circle(drawX + 42, drawY + 28, 11);
+      p.fill(25, 15, 45); p.circle(drawX + 23, drawY + 28, 5); p.circle(drawX + 42, drawY + 28, 5);
+    }
     if (!this.monster.isMoving && this.samePosition(this.monster, this.player)) this.finish(p, "아오오니에게 붙잡혔습니다. GAME OVER");
   }
 
@@ -362,8 +375,8 @@ export class EscapeGame {
     );
 
     const targetKey = this.positionKey(
-      this.player.x,
-      this.player.y
+      this.getActorCell(this.player).x,
+      this.getActorCell(this.player).y
     );
 
     const queue = [
@@ -440,10 +453,11 @@ export class EscapeGame {
         .split(",")
         .map(Number);
 
+      const isPlayerCell = stepKey === targetKey;
       this.startActorMove(
         this.monster,
-        x,
-        y
+        isPlayerCell ? this.player.px / TILE_SIZE : x,
+        isPlayerCell ? this.player.py / TILE_SIZE : y
       );
     }
   }
@@ -475,16 +489,7 @@ export class EscapeGame {
         direction.sprite;
 
       // 이동 중이 아니면 즉시 이동
-      if (!this.player.isMoving) {
-        this.movePlayer(
-          p,
-          direction
-        );
-      }
-    } else if (
-      key === "e" &&
-      !this.player.isMoving
-    ) {
+    } else if (key === "e") {
       this.interact();
     }
 
@@ -549,6 +554,13 @@ export class EscapeGame {
 
     actor.x = actor.px / TILE_SIZE;
     actor.y = actor.py / TILE_SIZE;
+    const tileX = Math.floor(actor.x);
+    const tileY = Math.floor(actor.y);
+    if (this.getTile(tileX, tileY) === TILE.KEY) {
+      this.inventory.push("key");
+      this.map[tileY][tileX] = TILE.FLOOR;
+    }
+    if (this.getTile(tileX, tileY) === TILE.EXIT) this.finish(this.sketch, "탈출 성공! R 키로 다시 시작할 수 있습니다.");
   }
 }
 
@@ -755,27 +767,43 @@ export class EscapeGame {
   }
 
   getTile(x, y) { return this.map[y]?.[x]; }
-  createActor(x, y, direction) { return { x, y, renderX: x, renderY: y, fromX: x, fromY: y, direction, moveStartFrame: 0, isMoving: false }; }
+  createActor(x, y, direction, speed = PLAYER_SPEED_PX) {
+    return { x, y, px: x * TILE_SIZE, py: y * TILE_SIZE, targetX: x, targetY: y, targetPx: x * TILE_SIZE, targetPy: y * TILE_SIZE, direction, speed, animationMs: 0, isMoving: false };
+  }
   startActorMove(actor, x, y, frameCount) {
-    actor.fromX = actor.renderX; actor.fromY = actor.renderY;
-    actor.x = x; actor.y = y; actor.moveStartFrame = frameCount; actor.isMoving = true;
+    const direction = DIRECTIONS.find((item) => item.x === x - actor.x && item.y === y - actor.y);
+    if (direction) actor.direction = direction.sprite;
+    actor.targetX = x; actor.targetY = y; actor.targetPx = x * TILE_SIZE; actor.targetPy = y * TILE_SIZE; actor.animationMs = 0; actor.isMoving = true;
   }
   updateActorAnimation(p, actor) {
-    if (!actor.isMoving) return { x: actor.x, y: actor.y, frame: 0 };
-    const progress = Math.min((p.frameCount - actor.moveStartFrame) / MOVE_FRAMES, 1);
-    const eased = progress * progress * (3 - 2 * progress);
-    actor.renderX = p.lerp(actor.fromX, actor.x, eased);
-    actor.renderY = p.lerp(actor.fromY, actor.y, eased);
-    if (progress === 1) {
-      actor.isMoving = false; actor.renderX = actor.x; actor.renderY = actor.y;
-      if (actor === this.player) this.onPlayerArrive(p);
-    }
-    return { x: actor.renderX, y: actor.renderY, frame: Math.min(MOVE_FRAMES - 1, Math.floor(progress * MOVE_FRAMES)) };
+    if (!actor.isMoving) return { x: actor.px / TILE_SIZE, y: actor.py / TILE_SIZE, frame: 0 };
+    const dx = actor.targetPx - actor.px; const dy = actor.targetPy - actor.py;
+    const distance = Math.hypot(dx, dy); const distanceThisFrame = actor.speed * Math.min(p.deltaTime, 50) / 1000;
+    actor.animationMs += Math.min(p.deltaTime, 50);
+    if (distance <= distanceThisFrame) {
+      actor.px = actor.targetPx; actor.py = actor.targetPy; actor.x = actor.targetX; actor.y = actor.targetY; actor.isMoving = false;
+    } else { actor.px += (dx / distance) * distanceThisFrame; actor.py += (dy / distance) * distanceThisFrame; }
+    if (actor === this.monster && this.monsterCaughtPlayer()) this.finish(p, "괴물에게 붙잡혔습니다. GAME OVER");
+    return { x: actor.px / TILE_SIZE, y: actor.py / TILE_SIZE, frame: Math.floor(actor.animationMs / (400 / MOVE_FRAMES)) % MOVE_FRAMES };
   }
   getSprite(direction, frame) {
     const frames = this.sprites[direction] ?? [];
     const spriteIndex = Math.min(SPRITE_FRAMES - 1, Math.floor(frame / (MOVE_FRAMES / SPRITE_FRAMES)));
     return frames[spriteIndex];
+  }
+  getMonsterSprite(direction, frame) {
+    const frames = this.monsterSprites[direction] ?? [];
+    const spriteIndex = Math.min(SPRITE_FRAMES - 1, Math.floor(frame / (MOVE_FRAMES / SPRITE_FRAMES)));
+    return frames[spriteIndex];
+  }
+  interact() {
+    const direction = DIRECTIONS.find((item) => item.sprite === this.player.direction);
+    const x = Math.floor(this.player.x) + direction.x;
+    const y = Math.floor(this.player.y) + direction.y;
+    if (this.getTile(x, y) !== TILE.LOCKED_DOOR) return;
+    if (!this.inventory.includes("key")) { this.message = "문이 잠겨 있습니다. 열쇠가 필요합니다."; return; }
+    this.map[y][x] = TILE.OPEN_DOOR;
+    this.message = "문을 열었습니다.";
   }
   onPlayerArrive(p) {
     if (this.samePosition(this.player, this.monster) && this.monster.active) this.finish(p, "아오오니에게 붙잡혔습니다. GAME OVER");
@@ -878,20 +906,74 @@ export class EscapeGame {
     );
   }
   
+  getFootHitbox(actor, px = actor.px, py = actor.py) {
+    return { left: px + 23, right: px + 41, top: py + 45, bottom: py + 60 };
+  }
+
+  getActorCell(actor) {
+    const hitbox = this.getFootHitbox(actor);
+    return { x: Math.floor((hitbox.left + hitbox.right) / 2 / TILE_SIZE), y: Math.floor(hitbox.bottom / TILE_SIZE) };
+  }
+
   canOccupyPixel(px, py) {
-  const margin = 10;
+    const hitbox = this.getFootHitbox(this.player, px, py);
+    const left = Math.floor(hitbox.left / TILE_SIZE);
+    const right = Math.floor(hitbox.right / TILE_SIZE);
+    const top = Math.floor(hitbox.top / TILE_SIZE);
+    const bottom = Math.floor(hitbox.bottom / TILE_SIZE);
+    return this.isPlayerWalkable(left, top) && this.isPlayerWalkable(right, top) && this.isPlayerWalkable(left, bottom) && this.isPlayerWalkable(right, bottom);
+  }
 
-  const left = Math.floor((px + margin) / TILE_SIZE);
-  const right = Math.floor((px + TILE_SIZE - margin) / TILE_SIZE);
-  const top = Math.floor((py + margin) / TILE_SIZE);
-  const bottom = Math.floor((py + TILE_SIZE - margin) / TILE_SIZE);
+  getMonsterCaptureHitbox() {
+    return {
+      left: this.monster.px + 17,
+      right: this.monster.px + 47,
+      top: this.monster.py + 24,
+      bottom: this.monster.py + 52,
+    };
+  }
 
-  return (
-    this.isPlayerWalkable(left, top) &&
-    this.isPlayerWalkable(right, top) &&
-    this.isPlayerWalkable(left, bottom) &&
-    this.isPlayerWalkable(right, bottom)
-  );
+  monsterCaughtPlayer() {
+    const monster = this.getMonsterCaptureHitbox();
+    const player = this.getFootHitbox(this.player);
+    return monster.left < player.right && monster.right > player.left && monster.top < player.bottom && monster.bottom > player.top;
+  }
+
+  movePlayerContinuous(dx, dy) {
+    const nextPx = this.player.px + dx;
+    const nextPy = this.player.py + dy;
+    if (!this.canOccupyPixel(nextPx, nextPy)) return;
+    this.player.px = nextPx;
+    this.player.py = nextPy;
+    this.player.x = nextPx / TILE_SIZE;
+    this.player.y = nextPy / TILE_SIZE;
+    const cell = this.getActorCell(this.player);
+    const tile = this.getTile(cell.x, cell.y);
+    if (tile === TILE.KEY) {
+      this.inventory.push("key");
+      this.map[cell.y][cell.x] = TILE.FLOOR;
+      this.message = "열쇠를 획득했습니다.";
+    } else if (tile === TILE.EXIT) {
+      this.finish(this.sketch, "탈출 성공! R 키로 다시 시작할 수 있습니다.");
+    }
+    if (this.monsterCaughtPlayer()) this.finish(this.sketch, "괴물에게 붙잡혔습니다. GAME OVER");
+  }
+
+  interact() {
+    const direction = DIRECTIONS.find((item) => item.sprite === this.player.direction);
+    const cell = this.getActorCell(this.player);
+    const x = cell.x + direction.x;
+    const y = cell.y + direction.y;
+    if (this.getTile(x, y) !== TILE.LOCKED_DOOR) {
+      this.message = "이 방향에는 상호작용할 대상이 없습니다.";
+      return;
+    }
+    if (!this.inventory.includes("key")) {
+      this.message = "문이 잠겨 있습니다. 열쇠가 필요합니다.";
+      return;
+    }
+    this.map[y][x] = TILE.OPEN_DOOR;
+    this.message = "문을 열었습니다.";
   }
 }
 
