@@ -22,12 +22,12 @@ const INITIAL_MAP = [
   [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
   [1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 5, 5, 1, 1, 1, 1, 1, 1],
   [1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
-  [1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
-  [1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
+  [1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0, 1],
+  [1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0, 1],
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
   [1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
-  [1, 5, 1, 5, 1, 5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 1, 0, 0, 0, 1],
-  [1, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 1, 0, 0, 0, 1],
+  [1, 5, 1, 5, 1, 5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 3, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 3, 0, 0, 0, 1],
   [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
   [1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
   [1, 5, 1, 5, 1, 5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -42,7 +42,7 @@ const INITIAL_MAP = [
   [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ];
-const SPAWN = { x: 2, y: 1 };
+const SPAWN = { x: 18, y: 1 };
 const KEY_POSITION = { x: 10, y: 3 };
 const EXIT_POSITION = { x: 28, y: 28 };
 const MONSTER_SPAWN = { x: 15, y: 12 };
@@ -70,9 +70,15 @@ export class EscapeGame {
 
   createSketch(p) {
     this.sprites = { A: [], D: [], S: [], W: [] };
+    this.monsterSprites = { A: [], D: [], S: [], W: [] };
     const loadSprite = (name) => p.loadImage(`${SPRITE_FOLDER}${name}`, undefined, () => { this.spriteLoadFailed = true; });
+    const monsterDirectionNames = { W: "up", A: "left", S: "down", D: "right" };
     p.preload = () => Object.keys(this.sprites).forEach((dir) => {
       this.sprites[dir] = Array.from({ length: SPRITE_FRAMES }, (_, index) => loadSprite(`${dir}${index + 1}.png`));
+      this.monsterSprites[dir] = Array.from(
+        { length: SPRITE_FRAMES },
+        (_, index) => loadSprite(`monster_${monsterDirectionNames[dir]}_${index + 1}.png`),
+      );
     });
     p.setup = () => { p.createCanvas(320, 320); p.frameRate(30); p.noSmooth(); p.textFont("sans-serif"); this.resizeCanvas(p); this.updateStatus(); };
     p.draw = () => this.draw(p);
@@ -126,11 +132,18 @@ export class EscapeGame {
       this.moveMonsterWithBFS(p);
       this.monster.nextMoveAt = p.millis() + MONSTER_MOVE_INTERVAL;
     }
-    const { x, y } = this.updateActorAnimation(p, this.monster);
+    const { x, y, frame } = this.updateActorAnimation(p, this.monster);
     const drawX = x * TILE_SIZE; const drawY = y * TILE_SIZE;
-    p.fill(116, 70, 212); p.noStroke(); p.rect(drawX + 7, drawY + 7, 50, 50, 10);
-    p.fill(235, 225, 255); p.circle(drawX + 23, drawY + 28, 11); p.circle(drawX + 42, drawY + 28, 11);
-    p.fill(25, 15, 45); p.circle(drawX + 23, drawY + 28, 5); p.circle(drawX + 42, drawY + 28, 5);
+    const image = this.getMonsterSprite(this.monster.direction, frame);
+    if (image?.width > 1 && image?.height > 1) {
+      p.imageMode(p.CENTER);
+      p.image(image, drawX + TILE_SIZE / 2, drawY + TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
+      p.imageMode(p.CORNER);
+    } else {
+      p.fill(116, 70, 212); p.noStroke(); p.rect(drawX + 7, drawY + 7, 50, 50, 10);
+      p.fill(235, 225, 255); p.circle(drawX + 23, drawY + 28, 11); p.circle(drawX + 42, drawY + 28, 11);
+      p.fill(25, 15, 45); p.circle(drawX + 23, drawY + 28, 5); p.circle(drawX + 42, drawY + 28, 5);
+    }
     if (!this.monster.isMoving && this.samePosition(this.monster, this.player)) this.finish(p, "아오오니에게 붙잡혔습니다. GAME OVER");
   }
 
@@ -210,6 +223,10 @@ export class EscapeGame {
   createActor(x, y, direction) { return { x, y, renderX: x, renderY: y, fromX: x, fromY: y, direction, moveStartFrame: 0, isMoving: false }; }
   startActorMove(actor, x, y, frameCount) {
     actor.fromX = actor.renderX; actor.fromY = actor.renderY;
+    if (x !== actor.x || y !== actor.y) {
+      const direction = DIRECTIONS.find((item) => item.x === x - actor.x && item.y === y - actor.y);
+      if (direction) actor.direction = direction.sprite;
+    }
     actor.x = x; actor.y = y; actor.moveStartFrame = frameCount; actor.isMoving = true;
   }
   updateActorAnimation(p, actor) {
@@ -226,6 +243,11 @@ export class EscapeGame {
   }
   getSprite(direction, frame) {
     const frames = this.sprites[direction] ?? [];
+    const spriteIndex = Math.min(SPRITE_FRAMES - 1, Math.floor(frame / (MOVE_FRAMES / SPRITE_FRAMES)));
+    return frames[spriteIndex];
+  }
+  getMonsterSprite(direction, frame) {
+    const frames = this.monsterSprites[direction] ?? [];
     const spriteIndex = Math.min(SPRITE_FRAMES - 1, Math.floor(frame / (MOVE_FRAMES / SPRITE_FRAMES)));
     return frames[spriteIndex];
   }
