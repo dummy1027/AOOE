@@ -28,6 +28,20 @@ button:hover, button:focus-visible { background: #392957; outline: 2px solid #c4
 #game-canvas, #game-canvas canvas { width: 100%; height: 100%; }
 #game-canvas canvas { display: block; image-rendering: pixelated; }
 .game-status { position: absolute; top: 12px; right: 12px; padding: 6px 9px; border-radius: 6px; background: rgb(7 6 13 / .7); color: #f0c869; font-size: .8rem; pointer-events: none; }
+.screen-overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; background: rgb(5 4 10 / .68); z-index: 2; }
+.panel { width: min(100%, 420px); padding: 34px; border: 1px solid #8872b8; border-radius: 16px; background: linear-gradient(145deg, #262036, #12111c); box-shadow: 0 20px 60px #000a; text-align: center; }
+.panel[hidden] { display: none; }
+.panel p { color: #d1c9df; line-height: 1.6; }
+.panel button { width: 100%; margin-top: 10px; }
+button.primary { background: #7054ac; border-color: #b7a0ed; }
+.key-settings { display: grid; gap: 8px; margin: 20px 0; text-align: left; }
+.key-setting { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; }
+.key-setting button { width: auto; min-width: 88px; margin: 0; text-transform: uppercase; }
+.jumpscare-screen { position: fixed; inset: 0; z-index: 100; overflow: hidden; display: grid; place-items: center; background: #09000a; }
+.jumpscare-screen[hidden] { display: none; }
+.jumpscare-screen img { width: min(42vmin, 280px); height: min(42vmin, 280px); object-fit: cover; image-rendering: pixelated; opacity: 1; transform: scale(.42); animation: monster-lunge 3.4s steps(1, end) forwards; }
+.jumpscare-flash { display: none; }
+@keyframes monster-lunge { 0%, 56% { opacity: 1; transform: scale(.42); filter: brightness(.38) contrast(1.5); } 57% { opacity: 1; transform: scale(5.8); filter: brightness(2.1) contrast(2.2) saturate(.35); } 100% { opacity: 1; transform: scale(5.8); filter: brightness(1.25) contrast(1.9) saturate(.5); } }
 .instructions { display: flex; flex-wrap: wrap; gap: 10px 20px; padding: 14px 2px 0; color: #cbc5d9; font-size: .86rem; }
 kbd { display: inline-block; min-width: 1.55em; padding: 1px 5px; border: 1px solid #786a97; border-bottom-width: 2px; border-radius: 4px; text-align: center; color: #fff; background: #262131; }
 @media (max-width: 480px) { .game-shell { padding: 12px; } .game-header { align-items: flex-start; } .game-header button { padding: 7px 9px; font-size: .82rem; } }

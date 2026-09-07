@@ -75,6 +75,7 @@ export class EscapeGame {
     this.container = container;
     this.statusElement = statusElement;
 
+    this.controls = { up: "w", left: "a", down: "s", right: "d", interact: "e" };
     this.resetState();
 
     this.sketch = new window.p5(
@@ -116,16 +117,27 @@ export class EscapeGame {
     this.lastPressedDirection = null;
 
     this.ended = false;
+    this.paused = false;
 
     this.message = "열쇠를 찾아 잠긴 문을 열고 탈출하세요.";
   }
 
   restart() {
     this.resetState();
-
-    this.sketch?.loop();
-
     this.updateStatus();
+  }
+
+  pause() { this.paused = true; this.heldDirections.clear(); this.sketch?.noLoop(); }
+  resume() { if (!this.ended) { this.paused = false; this.sketch?.loop(); } }
+  getBinding(action) { return this.controls[action]; }
+  setBinding(action, key) {
+    if (!key || key === "escape") return;
+    Object.keys(this.controls).forEach((name) => { if (name !== action && this.controls[name] === key) this.controls[name] = ""; });
+    this.controls[action] = key;
+  }
+  directionForKey(key) {
+    const action = Object.entries(this.controls).find(([, value]) => value === key)?.[0];
+    return ({ up: DIRECTIONS[0], left: DIRECTIONS[1], down: DIRECTIONS[2], right: DIRECTIONS[3] })[action];
   }
 
   toggleFullscreen() {
@@ -144,7 +156,7 @@ export class EscapeGame {
         (_, index) => loadSprite(`monster_${monsterDirectionNames[dir]}_${index + 1}.png`),
       );
     });
-    p.setup = () => { p.createCanvas(320, 320); p.frameRate(30); p.noSmooth(); p.textFont("sans-serif"); this.resizeCanvas(p); this.updateStatus(); };
+    p.setup = () => { p.createCanvas(320, 320); p.frameRate(30); p.noSmooth(); p.textFont("sans-serif"); this.resizeCanvas(p); this.updateStatus(); p.noLoop(); };
     p.draw = () => this.draw(p);
 
     p.keyPressed = () => {
@@ -463,19 +475,11 @@ export class EscapeGame {
   }
 
   handleKey(p, key) {
-    if (key === "r") {
-      this.restart();
+    if (this.ended || this.paused) {
       return false;
     }
 
-    if (this.ended) {
-      return false;
-    }
-
-    const direction =
-      DIRECTIONS.find(
-        (item) => item.key === key
-      );
+    const direction = this.directionForKey(key);
 
     if (direction) {
       // 누른 방향을 저장
@@ -489,7 +493,7 @@ export class EscapeGame {
         direction.sprite;
 
       // 이동 중이 아니면 즉시 이동
-    } else if (key === "e") {
+    } else if (key === this.controls.interact) {
       this.interact();
     }
 
@@ -520,13 +524,11 @@ export class EscapeGame {
   }
 
   processHeldMovement(p) {
-  if (this.ended) return;
+  if (this.ended || this.paused) return;
   if (this.heldDirections.size === 0) return;
 
   const key = Array.from(this.heldDirections).at(-1);
-  const direction = DIRECTIONS.find(
-    (item) => item.key === key
-  );
+  const direction = this.directionForKey(key);
 
   if (!direction) return;
 
@@ -813,7 +815,14 @@ export class EscapeGame {
   isMonsterWalkable(x, y) { return this.isPlayerWalkable(x, y); }
   positionKey(x, y) { return `${x},${y}`; }
   samePosition(a, b) { return a.x === b.x && a.y === b.y; }
-  finish(p, message) { this.ended = true; this.message = message; this.updateStatus(); p.noLoop(); }
+  finish(p, message) {
+    if (this.ended) return;
+    this.ended = true; this.message = message; this.updateStatus(); p.noLoop();
+    if (message.includes("GAME OVER")) {
+      this.onJumpscare?.();
+      window.setTimeout(() => this.onGameOver?.(), 3450);
+    }
+  }
   updateStatus() {
     const key =
       this.inventory.includes("key")

@@ -1,25 +1,9 @@
 <!doctype html>
-<html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#101019" />
-    <title>어둠 속 탈출</title>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <main class="game-shell">
-      <section class="game-frame" aria-label="게임 화면">
-        <div id="game-canvas"></div>
-        <div id="game-status" class="game-status" aria-live="polite"></div>
-      </section>
-      <section class="instructions" aria-label="조작 안내">
-        <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 이동</span>
-        <span><kbd>E</kbd> 조사 / 문 열기</span><span><kbd>R</kbd> 다시 시작</span>
-      </section>
-    </main>
-    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.3/lib/p5.min.js"></script>
-    <script type="module" src="./src/main.js"></script>
-  </body>
-</html>
+<html lang="ko"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>괴물로부터 탈출</title><link rel="stylesheet" href="./styles.css" /></head>
+<body><main class="game-shell"><section class="game-frame" aria-label="게임 화면"><div id="game-canvas"></div><div id="game-status" class="game-status" aria-live="polite"></div>
+<div id="screen-overlay" class="screen-overlay" aria-live="polite">
+<section id="main-screen" class="panel"><p class="eyebrow">ESCAPE THE MONSTER</p><h1>괴물로부터 탈출</h1><p>열쇠를 찾아 문을 열고 출구로 탈출하세요.</p><button id="start-button" class="primary">게임 시작</button><button id="main-settings-button">설정</button></section>
+<section id="pause-screen" class="panel" hidden><p class="eyebrow">PAUSED</p><h1>일시정지</h1><button id="resume-button" class="primary">계속하기</button><button id="restart-button">다시하기</button><button id="pause-settings-button">설정</button><button id="quit-button">나가기</button></section>
+<section id="gameover-screen" class="panel" hidden><p class="eyebrow">GAME OVER</p><h1>괴물에게 붙잡혔습니다</h1><button id="gameover-restart-button" class="primary">다시 시작</button><button id="gameover-quit-button">메인 화면</button></section>
+<section id="settings-screen" class="panel" hidden><p class="eyebrow">CONTROLS</p><h1>설정</h1><p>버튼을 누른 뒤 원하는 키를 입력하세요.</p><div id="key-settings" class="key-settings"></div><button id="settings-back-button">돌아가기</button></section>
+</div><div id="jumpscare-screen" class="jumpscare-screen" hidden aria-label="괴물이 다가옵니다"><div class="jumpscare-flash"></div><img src="./images/monster_down_1.png" alt="" /></div></section><section class="instructions" aria-label="조작 안내"><span id="move-help">W A S D 이동</span><span id="interact-help">E 상호작용 / 문 열기</span><span><kbd>ESC</kbd> 일시정지</span></section></main><script src="https://cdn.jsdelivr.net/npm/p5@1.11.3/lib/p5.min.js"></script><script type="module" src="./src/main.js"></script></body></html>
