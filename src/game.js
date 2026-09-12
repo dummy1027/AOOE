@@ -210,7 +210,7 @@ export class EscapeGame {
 
   this.drawMap(p);
   this.drawPlayer(p, playerAnimation);
-  this.drawMonster(p);f               
+  this.drawMonster(p);
 
   p.pop();
 
