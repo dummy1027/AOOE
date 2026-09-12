@@ -194,39 +194,28 @@ export class EscapeGame {
       : 0
   };
 
-    p.background(10, 10, 14);
+  p.background(10, 10, 14);
 
-    const cameraX =
-      p.width / 2 -
-      (playerAnimation.x * TILE_SIZE + TILE_SIZE / 2);
+  const cameraX =
+    p.width / 2 -
+    (playerAnimation.x * TILE_SIZE + TILE_SIZE / 2);
 
-    const cameraY =
-      p.height / 2 -
-      (playerAnimation.y * TILE_SIZE + TILE_SIZE / 2);
+  const cameraY =
+    p.height / 2 -
+    (playerAnimation.y * TILE_SIZE + TILE_SIZE / 2);
 
-    const lightX =
-      cameraX +
-      playerAnimation.x * TILE_SIZE +
-      TILE_SIZE / 2;
+  p.push();
 
-    const lightY =
-      cameraY +
-      playerAnimation.y * TILE_SIZE +
-      TILE_SIZE / 2;
+  p.translate(cameraX, cameraY);
 
-    p.push();
+  this.drawMap(p);
+  this.drawPlayer(p, playerAnimation);
+  this.drawMonster(p);f               
 
-    p.translate(cameraX, cameraY);
+  p.pop();
 
-    this.drawMap(p);
-    this.drawPlayer(p, playerAnimation);
-    this.drawMonster(p);
-
-    p.pop();
-
-    this.drawFlashlight(p, lightX, lightY);
-    this.drawMessage(p);
-  }
+  this.drawMessage(p);
+}
 
   drawMap(p) {
     const colors = {
