@@ -65,10 +65,43 @@ const INITIAL_MAP = [
   [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ];
+const SECOND_FLOOR_MAP = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,6,6,6,1,1,6,6,6,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,6,6,6,1,1,6,6,6,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,6,6,6,1,1,6,6,6,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,1,6,6,6,1,1,6,6,6,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,1,6,6,6,1,1,6,6,6,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,6,6,6,1,1,6,6,6,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1,1,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,3,3,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,3,0,0,0,1,0,0,0,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,3,0,0,0,1,0,0,0,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,3,3,1,1,1,1,1,3,3,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
 const SPAWN = { x: 2, y: 1 };
 const KEY_POSITION = { x: 10, y: 3 };
 const EXIT_POSITION = { x: 28, y: 28 };
 const MONSTER_SPAWN = { x: 15, y: 12 };
+const SECOND_FLOOR_SPAWN = { x: 26, y: 6 };
 
 export class EscapeGame {
   constructor(container, statusElement) {
@@ -85,6 +118,9 @@ export class EscapeGame {
   }
 
   resetState() {
+
+    this.currentFloor = 0;
+
     this.map = INITIAL_MAP.map((row) => [...row]);
 
     this.map[KEY_POSITION.y][KEY_POSITION.x] = TILE.KEY;
@@ -104,7 +140,7 @@ export class EscapeGame {
         "S",
         MONSTER_SPEED_PX
       ),
-      active: true,
+      active: false,
       nextMoveAt: 1000,
     };
 
@@ -534,30 +570,76 @@ export class EscapeGame {
 }
 
   movePlayerContinuous(dx, dy) {
-  const actor = this.player;
+  const nextPx = this.player.px + dx;
+  const nextPy = this.player.py + dy;
 
-  const nextPx = actor.px + dx;
-  const nextPy = actor.py + dy;
+  if (!this.canOccupyPixel(nextPx, nextPy)) return;
 
-  if (this.canOccupyPixel(nextPx, nextPy)) {
-    actor.px = nextPx;
-    actor.py = nextPy;
+  this.player.px = nextPx;
+  this.player.py = nextPy;
+  this.player.x = nextPx / TILE_SIZE;
+  this.player.y = nextPy / TILE_SIZE;
 
-    actor.x = actor.px / TILE_SIZE;
-    actor.y = actor.py / TILE_SIZE;
-    const tileX = Math.floor(actor.x);
-    const tileY = Math.floor(actor.y);
-    if (this.getTile(tileX, tileY) === TILE.KEY) {
-      this.inventory.push("key");
-      this.map[tileY][tileX] = TILE.FLOOR;
-    }
-    if (this.getTile(tileX, tileY) === TILE.EXIT) this.finish(this.sketch, "탈출 성공! R 키로 다시 시작할 수 있습니다.");
-  }
+  const cell = this.getActorCell(this.player);
+  const tile = this.getTile(cell.x, cell.y);
+
+  // 여기에 계단 판정
+  if (tile === TILE.STAIRS && !this.stairTransitionLocked) {
+    this.changeFloor();
+    return;
 }
 
-  getTile(x, y) {
-    return this.map[y]?.[x];
+if (tile !== TILE.STAIRS) {
+    this.stairTransitionLocked = false;
+}
+}
+
+getTile(x, y) {
+  return this.map[y]?.[x];
+}
+
+changeFloor() {
+  if (this.currentFloor === 0) {
+    // 1층 → 2층
+    this.currentFloor = 1;
+    this.map = SECOND_FLOOR_MAP.map((row) => [...row]);
+
+    this.player = this.createActor(
+      SECOND_FLOOR_SPAWN.x,
+      SECOND_FLOOR_SPAWN.y,
+      "S",
+      PLAYER_SPEED_PX
+    );
+
+    this.message = "2층으로 올라왔습니다.";
+  } else {
+    // 2층 → 1층
+    this.currentFloor = 0;
+    this.stairTransitionLocked = false;
+    this.map = INITIAL_MAP.map((row) => [...row]);
+
+    if (!this.inventory.includes("key")) {
+      this.map[KEY_POSITION.y][KEY_POSITION.x] = TILE.KEY;
+    }
+
+    this.map[EXIT_POSITION.y][EXIT_POSITION.x] = TILE.EXIT;
+
+    this.player = this.createActor(
+      22,
+      6,
+      "S",
+      PLAYER_SPEED_PX
+    );
+
+    this.message = "1층으로 내려왔습니다.";
   }
+
+  this.heldDirections.clear();
+  this.lastPressedDirection = null;
+  this.monster.active = false;
+  this.updateStatus();
+}
+  
 
   createActor(
     x,
@@ -752,7 +834,7 @@ export class EscapeGame {
     if (this.getTile(x, y) !== TILE.LOCKED_DOOR) { this.message = "조사할 수 있는 것이 없습니다."; return; }
     if (!this.inventory.includes("key")) { this.message = "문이 잠겨 있습니다. 열쇠가 필요합니다."; return; }
     this.map[y][x] = TILE.OPEN_DOOR;
-    this.monster.active = true;
+    this.monster.active = false;
     this.monster.nextMoveAt = this.sketch.millis() + MONSTER_MOVE_INTERVAL;
     this.message = "문이 열렸습니다. 아오오니가 BFS 최단 경로로 추격합니다!";
   }
@@ -932,30 +1014,49 @@ export class EscapeGame {
   }
 
   monsterCaughtPlayer() {
-    const monster = this.getMonsterCaptureHitbox();
-    const player = this.getFootHitbox(this.player);
-    return monster.left < player.right && monster.right > player.left && monster.top < player.bottom && monster.bottom > player.top;
-  }
+  if (!this.monster.active) return false;
+
+  const monster = this.getMonsterCaptureHitbox();
+  const player = this.getFootHitbox(this.player);
+
+  return monster.left < player.right &&
+         monster.right > player.left &&
+         monster.top < player.bottom &&
+         monster.bottom > player.top;
+}
 
   movePlayerContinuous(dx, dy) {
     const nextPx = this.player.px + dx;
     const nextPy = this.player.py + dy;
+
     if (!this.canOccupyPixel(nextPx, nextPy)) return;
+
     this.player.px = nextPx;
     this.player.py = nextPy;
     this.player.x = nextPx / TILE_SIZE;
     this.player.y = nextPy / TILE_SIZE;
+
     const cell = this.getActorCell(this.player);
     const tile = this.getTile(cell.x, cell.y);
-    if (tile === TILE.KEY) {
-      this.inventory.push("key");
-      this.map[cell.y][cell.x] = TILE.FLOOR;
-      this.message = "열쇠를 획득했습니다.";
-    } else if (tile === TILE.EXIT) {
-      this.finish(this.sketch, "탈출 성공! R 키로 다시 시작할 수 있습니다.");
+
+    if (tile === TILE.STAIRS) {
+        this.changeFloor();
+        return;
     }
-    if (this.monsterCaughtPlayer()) this.finish(this.sketch, "괴물에게 붙잡혔습니다. GAME OVER");
-  }
+
+    if (tile === TILE.KEY) {
+        this.inventory.push("key");
+        this.map[cell.y][cell.x] = TILE.FLOOR;
+        this.message = "열쇠를 획득했습니다.";
+    } else if (tile === TILE.EXIT) {
+        this.finish(this.sketch, "탈출 성공! R 키로 다시 시작할 수 있습니다.");
+    }
+
+    if (this.monsterCaughtPlayer()) {
+        this.finish(this.sketch, "괴물에게 붙잡혔습니다. GAME OVER");
+    }
+    this.stairTransitionLocked = true;
+}
 
   interact() {
     const direction = DIRECTIONS.find((item) => item.sprite === this.player.direction);
