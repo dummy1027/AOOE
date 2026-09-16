@@ -149,6 +149,8 @@ export class EscapeGame {
     // 현재 누르고 있는 방향
     this.heldDirections = new Set();
 
+    this.inventoryOpen = false;
+
     // 가장 최근에 누른 방향
     this.lastPressedDirection = null;
 
@@ -251,6 +253,10 @@ export class EscapeGame {
   p.pop();
 
   this.drawMessage(p);
+
+  if (this.inventoryOpen) {
+  this.drawInventory(p);
+  }
 }
 
   drawMap(p) {
@@ -322,6 +328,53 @@ export class EscapeGame {
       });
     });
   }
+
+  drawInventory(p) {
+  // 화면 전체 어둡게
+  p.fill(0, 0, 0, 180);
+  p.noStroke();
+  p.rect(0, 0, p.width, p.height);
+
+  // 인벤토리 창
+  const panelWidth = 420;
+  const panelHeight = 300;
+  const panelX = (p.width - panelWidth) / 2;
+  const panelY = (p.height - panelHeight) / 2;
+
+  p.fill(25, 25, 35);
+  p.rect(panelX, panelY, panelWidth, panelHeight, 12);
+
+  // 테두리
+  p.noFill();
+  p.stroke(100, 100, 120);
+  p.strokeWeight(2);
+  p.rect(panelX, panelY, panelWidth, panelHeight, 12);
+
+  // 제목
+  p.noStroke();
+  p.fill(255);
+  p.textAlign(p.CENTER, p.CENTER);
+  p.textSize(26);
+  p.text("INVENTORY", p.width / 2, panelY + 45);
+
+  // 아이템
+  p.textSize(18);
+
+  if (this.inventory.length === 0) {
+    p.fill(170);
+    p.text("아이템이 없습니다.", p.width / 2, panelY + 130);
+  } else {
+    this.inventory.forEach((item, index) => {
+      p.fill(255);
+      p.text(`${index + 1}. ${item}`, p.width / 2, panelY + 100 + index * 35);
+    });
+  }
+
+  // 닫기 안내
+  p.fill(150);
+  p.textSize(14);
+  p.text("F 키로 닫기", p.width / 2, panelY + panelHeight - 30);
+}
 
   drawPlayer(p, animation) {
     const {
@@ -503,6 +556,18 @@ export class EscapeGame {
     if (this.ended || this.paused) {
       return false;
     }
+
+    if (key === "f") {
+  this.inventoryOpen = !this.inventoryOpen;
+
+  // 인벤토리를 여는 동안 이동 멈추기
+  this.heldDirections.clear();
+  this.lastPressedDirection = null;
+
+  this.updateStatus();
+
+  return false;
+}
 
     const direction = this.directionForKey(key);
 
