@@ -101,7 +101,7 @@ const SPAWN = { x: 2, y: 1 };
 const KEY_POSITION = { x: 10, y: 3 };
 const EXIT_POSITION = { x: 28, y: 28 };
 const MONSTER_SPAWN = { x: 15, y: 12 };
-const SECOND_FLOOR_SPAWN = { x: 26, y: 6 };
+const SECOND_FLOOR_SPAWN = { x: 27, y: 6 };
 
 export class EscapeGame {
   constructor(container, statusElement) {
