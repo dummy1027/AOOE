@@ -145,6 +145,8 @@ export class EscapeGame {
     };
 
     this.inventory = [];
+    this.heldItem = null;
+    this.hasKey = 0;
 
     // 현재 누르고 있는 방향
     this.heldDirections = new Set();
@@ -329,51 +331,293 @@ export class EscapeGame {
     });
   }
 
-  drawInventory(p) {
-  // 화면 전체 어둡게
-  p.fill(0, 0, 0, 180);
+drawInventory(p) {
+  // =========================
+  // 인벤토리 전체 오버레이
+  // =========================
+  p.push();
+
+  // 화면 어둡게
+  p.fill(0, 0, 0, 190);
   p.noStroke();
   p.rect(0, 0, p.width, p.height);
 
-  // 인벤토리 창
-  const panelWidth = 420;
-  const panelHeight = 300;
+  // =========================
+  // 인벤토리 패널
+  // =========================
+  const panelWidth = Math.min(820, p.width - 40);
+  const panelHeight = Math.min(500, p.height - 40);
+
   const panelX = (p.width - panelWidth) / 2;
   const panelY = (p.height - panelHeight) / 2;
 
-  p.fill(25, 25, 35);
-  p.rect(panelX, panelY, panelWidth, panelHeight, 12);
-
-  // 테두리
-  p.noFill();
-  p.stroke(100, 100, 120);
+  // 패널
+  p.fill(20, 20, 28);
+  p.stroke(90, 90, 110);
   p.strokeWeight(2);
   p.rect(panelX, panelY, panelWidth, panelHeight, 12);
 
+  // =========================
   // 제목
+  // =========================
   p.noStroke();
-  p.fill(255);
-  p.textAlign(p.CENTER, p.CENTER);
+  p.fill(245);
+  p.textAlign(p.LEFT, p.CENTER);
   p.textSize(26);
-  p.text("INVENTORY", p.width / 2, panelY + 45);
+  p.text("INVENTORY", panelX + 28, panelY + 32);
 
-  // 아이템
+  p.fill(120);
+  p.textSize(13);
+  p.text("아이템", panelX + 30, panelY + 58);
+
+  // =========================
+  // 왼쪽 : 주손
+  // =========================
+  const handAreaX = panelX + 30;
+  const handAreaY = panelY + 95;
+
+  const handWidth = panelWidth * 0.35;
+  const handHeight = panelHeight - 145;
+
+  // 주손 영역
+  p.fill(27, 27, 38);
+  p.stroke(70, 70, 90);
+  p.strokeWeight(2);
+  p.rect(
+    handAreaX,
+    handAreaY,
+    handWidth,
+    handHeight,
+    10
+  );
+
+  // 주손 제목
+  p.noStroke();
+  p.fill(220);
+  p.textAlign(p.CENTER, p.CENTER);
   p.textSize(18);
+  p.text(
+    "주손",
+    handAreaX + handWidth / 2,
+    handAreaY + 35
+  );
 
-  if (this.inventory.length === 0) {
-    p.fill(170);
-    p.text("아이템이 없습니다.", p.width / 2, panelY + 130);
+  // =========================
+  // 주손 슬롯
+  // =========================
+  const handSlotSize = Math.min(
+    handWidth * 0.62,
+    handHeight * 0.55
+  );
+
+  const handSlotX =
+    handAreaX + (handWidth - handSlotSize) / 2;
+
+  const handSlotY =
+    handAreaY + 65;
+
+  // 슬롯
+  p.fill(15, 15, 22);
+  p.stroke(110, 110, 130);
+  p.strokeWeight(2);
+  p.rect(
+    handSlotX,
+    handSlotY,
+    handSlotSize,
+    handSlotSize,
+    8
+  );
+
+  // =========================
+  // 주손 아이템 표시
+  // =========================
+  p.noStroke();
+  p.textAlign(p.CENTER, p.CENTER);
+  p.textSize(14);
+
+  if (this.heldItem) {
+    p.fill(245);
+    p.text(
+      this.heldItem,
+      handSlotX + handSlotSize / 2,
+      handSlotY + handSlotSize / 2
+    );
   } else {
-    this.inventory.forEach((item, index) => {
-      p.fill(255);
-      p.text(`${index + 1}. ${item}`, p.width / 2, panelY + 100 + index * 35);
-    });
+    p.fill(100);
+    p.text(
+      "빈손",
+      handSlotX + handSlotSize / 2,
+      handSlotY + handSlotSize / 2
+    );
   }
 
-  // 닫기 안내
-  p.fill(150);
-  p.textSize(14);
-  p.text("F 키로 닫기", p.width / 2, panelY + panelHeight - 30);
+  // =========================
+  // 가운데 구분선
+  // =========================
+  const dividerX =
+    handAreaX + handWidth + 25;
+
+  p.stroke(65, 65, 85);
+  p.strokeWeight(2);
+
+  p.line(
+    dividerX,
+    panelY + 75,
+    dividerX,
+    panelY + panelHeight - 30
+  );
+
+  // =========================
+  // 오른쪽 : 6칸 인벤토리
+  // =========================
+  const inventoryX = dividerX + 30;
+  const inventoryY = panelY + 95;
+
+  const inventoryWidth =
+    panelX + panelWidth - inventoryX - 30;
+
+  const inventoryHeight =
+    panelHeight - 145;
+
+  // 보관함 제목
+  p.noStroke();
+  p.fill(220);
+  p.textAlign(p.LEFT, p.CENTER);
+  p.textSize(18);
+  p.text(
+    "보관함  6칸",
+    inventoryX,
+    inventoryY - 35
+  );
+
+  // =========================
+  // 2 x 3 슬롯
+  // =========================
+  const columns = 3;
+  const rows = 2;
+  const gap = 12;
+
+  const slotSize = Math.min(
+    (inventoryWidth - gap * (columns - 1)) / columns,
+    (inventoryHeight - gap * (rows - 1)) / rows
+  );
+
+  const totalWidth =
+    slotSize * columns + gap * (columns - 1);
+
+  const startX =
+    inventoryX + (inventoryWidth - totalWidth) / 2;
+
+  const startY = inventoryY;
+
+  for (let index = 0; index < 6; index++) {
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+
+    const x =
+      startX + column * (slotSize + gap);
+
+    const y =
+      startY + row * (slotSize + gap);
+
+    // 슬롯
+    p.fill(15, 15, 22);
+    p.stroke(75, 75, 95);
+    p.strokeWeight(2);
+
+    p.rect(
+      x,
+      y,
+      slotSize,
+      slotSize,
+      8
+    );
+
+    // 번호
+    p.noStroke();
+    p.fill(90);
+    p.textAlign(p.LEFT, p.TOP);
+    p.textSize(12);
+
+    p.text(
+      `${index + 1}`,
+      x + 8,
+      y + 7
+    );
+
+    // 실제 아이템이 있다면 표시
+    if (this.inventory[index]) {
+      p.fill(245);
+      p.textAlign(p.CENTER, p.CENTER);
+      p.textSize(15);
+
+      p.text(
+        this.inventory[index],
+        x + slotSize / 2,
+        y + slotSize / 2
+      );
+    }
+  }
+
+  // =========================
+  // 하단 안내
+  // =========================
+  p.noStroke();
+  p.fill(110);
+  p.textAlign(p.CENTER, p.CENTER);
+  p.textSize(13);
+
+  p.text(
+    "F 키로 닫기",
+    panelX + panelWidth / 2,
+    panelY + panelHeight - 18
+  );
+
+  p.pop();
+}
+
+
+equipInventorySlot(index) {
+  // 슬롯 번호가 잘못된 경우
+  if (index < 0 || index >= this.inventory.length) {
+    this.message = "이 슬롯에는 아이템이 없습니다.";
+    return;
+  }
+
+  // 해당 슬롯이 비어 있는 경우
+  if (!this.inventory[index]) {
+    this.message = "이 슬롯에는 아이템이 없습니다.";
+    return;
+  }
+
+  // =========================
+  // 주손이 비어 있는 경우
+  // =========================
+  if (!this.heldItem) {
+    this.heldItem = this.inventory[index];
+
+    // 해당 아이템을 보관함에서 제거
+    this.inventory.splice(index, 1);
+
+    this.message =
+      `${this.heldItem}을(를) 주손에 들었습니다.`;
+
+    this.updateStatus();
+    return;
+  }
+
+  // =========================
+  // 주손에 아이템이 이미 있는 경우
+  // =========================
+  const temp = this.heldItem;
+
+  this.heldItem = this.inventory[index];
+  this.inventory[index] = temp;
+
+  this.message =
+    `${this.heldItem}을(를) 주손에 들었습니다.`;
+
+  this.updateStatus();
 }
 
   drawPlayer(p, animation) {
@@ -564,6 +808,14 @@ export class EscapeGame {
   this.lastPressedDirection = null;
 
   this.updateStatus();
+
+  return false;
+}
+
+if (this.inventoryOpen) {
+  if (/^[1-6]$/.test(key)) {
+    this.equipInventorySlot(Number(key) - 1);
+  }
 
   return false;
 }
@@ -960,7 +1212,7 @@ changeFloor() {
   }
   updateStatus() {
     const key =
-      this.inventory.includes("key")
+      this.inventory.includes("key") || this.heldItem === "key"
         ? "획득"
         : "없음";
 
@@ -1112,6 +1364,7 @@ changeFloor() {
         this.inventory.push("key");
         this.map[cell.y][cell.x] = TILE.FLOOR;
         this.message = "열쇠를 획득했습니다.";
+        this.hasKey = 1;
     } else if (tile === TILE.EXIT) {
         this.finish(this.sketch, "탈출 성공! R 키로 다시 시작할 수 있습니다.");
     }
@@ -1123,20 +1376,22 @@ changeFloor() {
 }
 
   interact() {
-    const direction = DIRECTIONS.find((item) => item.sprite === this.player.direction);
-    const cell = this.getActorCell(this.player);
-    const x = cell.x + direction.x;
-    const y = cell.y + direction.y;
-    if (this.getTile(x, y) !== TILE.LOCKED_DOOR) {
-      this.message = "이 방향에는 상호작용할 대상이 없습니다.";
-      return;
-    }
-    if (!this.inventory.includes("key")) {
-      this.message = "문이 잠겨 있습니다. 열쇠가 필요합니다.";
-      return;
-    }
-    this.map[y][x] = TILE.OPEN_DOOR;
-    this.message = "문을 열었습니다.";
-  }
-}
+  const direction = DIRECTIONS.find((item) => item.sprite === this.player.direction);
+  const cell = this.getActorCell(this.player);
+  const x = cell.x + direction.x;
+  const y = cell.y + direction.y;
 
+  if (this.getTile(x, y) !== TILE.LOCKED_DOOR) {
+    this.message = "이 방향에는 상호작용할 대상이 없습니다.";
+    return;
+  }
+
+  if (this.hasKey === 0) {
+    this.message = "문이 잠겨 있습니다. 열쇠가 필요합니다.";
+    return;
+  }
+
+  this.map[y][x] = TILE.OPEN_DOOR;
+  this.message = "문을 열었습니다.";
+}
+}
