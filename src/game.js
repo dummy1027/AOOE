@@ -1647,16 +1647,16 @@ export class EscapeGame {
 
     if (this.currentFloor === 0) {
       nextFloor = 1;
-      spawn = { x: 22, y: 7 };
+      spawn = { x: 27, y: 7 };
     } else if (this.currentFloor === 1 && cell.x < 25) {
       nextFloor = 2;
-      spawn = { x: 22, y: 7 };
+      spawn = { x: 27, y: 7 };
     } else if (this.currentFloor === 1) {
       nextFloor = 0;
       spawn = { x: 22, y: 6 };
     } else if (this.currentFloor === 2 && cell.x >= 25) {
       nextFloor = 1;
-      spawn = { x: 27, y: 7 };
+      spawn = { x: 22, y: 7 };
     } else {
       return;
     }
