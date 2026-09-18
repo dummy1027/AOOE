@@ -18,6 +18,7 @@ const TILE = {
   OPEN_DOOR: 5,
   STAIRS: 6,
   EASTER_EGG_ITEM: 7,
+  DROPPED_ITEM: 8,
 };
 
 const DIRECTIONS = [
@@ -210,6 +211,8 @@ export class EscapeGame {
     this.inventory = [];
     this.heldItem = null;
     this.easterEggItemObtained = preserveMascot;
+    this.easterEggItemDropped = false;
+    this.droppedItems = [];
     if (preserveMascot) {
       if (mascotInInventory) {
         this.inventory.push(EASTER_EGG_ITEM_NAME);
@@ -267,6 +270,12 @@ export class EscapeGame {
   getInventoryCapacity() {
     const hasMascot = this.heldItem === EASTER_EGG_ITEM_NAME || this.inventory.includes(EASTER_EGG_ITEM_NAME);
     return hasMascot ? 7 : 6;
+  }
+
+  getDroppedItemAt(floor, x, y) {
+    return this.droppedItems.find(
+      (item) => item.floor === floor && item.x === x && item.y === y
+    );
   }
 
   restart() {
@@ -334,7 +343,11 @@ export class EscapeGame {
 
     p.mousePressed = () => {
       if (this.inventoryOpen) {
-        this.handleInventoryClick(p.mouseX, p.mouseY);
+        if (p.mouseButton === p.RIGHT) {
+          this.handleInventoryDrop(p.mouseX, p.mouseY);
+        } else {
+          this.handleInventoryClick(p.mouseX, p.mouseY);
+        }
         return false;
       }
     };
@@ -406,14 +419,23 @@ export class EscapeGame {
       5: [145, 97, 48],
       6: [54, 105, 155],
       7: [180, 85, 155],
+      8: [165, 125, 75],
     };
 
     this.map.forEach((row, y) => {
       row.forEach((tile, x) => {
         const px = x * TILE_SIZE;
         const py = y * TILE_SIZE;
+        const droppedItem = tile === TILE.DROPPED_ITEM
+          ? this.getDroppedItemAt(this.currentFloor, x, y)
+          : null;
+        const tileColor = tile !== TILE.DROPPED_ITEM
+          ? colors[tile]
+          : droppedItem?.name === EASTER_EGG_ITEM_NAME
+            ? colors[TILE.EASTER_EGG_ITEM]
+            : colors[TILE.KEY];
 
-        p.fill(...colors[tile]);
+        p.fill(...tileColor);
         p.stroke(12, 12, 18);
         p.strokeWeight(1);
         p.rect(px, py, TILE_SIZE, TILE_SIZE);
@@ -443,6 +465,19 @@ export class EscapeGame {
         }
 
         if (tile === TILE.EASTER_EGG_ITEM) {
+          p.push();
+          p.noStroke();
+          p.fill(240, 170, 205);
+          p.ellipse(px + 32, py + 34, 28, 24);
+          p.circle(px + 24, py + 22, 12);
+          p.circle(px + 40, py + 22, 12);
+          p.fill(45, 25, 45);
+          p.circle(px + 27, py + 32, 3);
+          p.circle(px + 37, py + 32, 3);
+          p.pop();
+        }
+
+        if (tile === TILE.DROPPED_ITEM && droppedItem?.name === EASTER_EGG_ITEM_NAME) {
           p.push();
           p.noStroke();
           p.fill(240, 170, 205);
@@ -999,6 +1034,75 @@ export class EscapeGame {
     }
   }
 
+  handleInventoryDrop(x, y) {
+    const { handSlot, slots } = this.getInventorySlotBounds();
+    const contains = (slot) => (
+      x >= slot.x && x <= slot.x + slot.size &&
+      y >= slot.y && y <= slot.y + slot.size
+    );
+
+    if (contains(handSlot)) {
+      this.dropHeldItem();
+      return;
+    }
+
+    const slotIndex = slots.findIndex((slot) => (
+      x >= slot.x && x <= slot.x + slot.size &&
+      y >= slot.y && y <= slot.y + slot.size
+    ));
+
+    if (slotIndex !== -1) {
+      this.dropInventoryItem(slotIndex);
+    }
+  }
+
+  dropInventoryItem(index) {
+    if (!this.inventory[index]) return;
+
+    const itemName = this.inventory[index];
+    if (this.dropItem(itemName)) {
+      this.inventory.splice(index, 1);
+    }
+  }
+
+  dropHeldItem() {
+    if (this.heldItem === null) {
+      this.message = "주손에 버릴 아이템이 없습니다.";
+      return;
+    }
+
+    if (this.dropItem(this.heldItem)) {
+      this.heldItem = null;
+    }
+  }
+
+  dropItem(itemName) {
+
+    const direction = DIRECTIONS.find((item) => item.sprite === this.player.direction);
+    const cell = this.getActorCell(this.player);
+    const targetX = cell.x + (direction?.x ?? 0);
+    const targetY = cell.y + (direction?.y ?? 0);
+
+    if (this.getTile(targetX, targetY) !== TILE.FLOOR) {
+      this.message = "진행 방향에 아이템을 놓을 빈 공간이 없습니다.";
+      return false;
+    }
+
+    this.map[targetY][targetX] = TILE.DROPPED_ITEM;
+    this.droppedItems.push({
+      floor: this.currentFloor,
+      x: targetX,
+      y: targetY,
+      name: itemName,
+    });
+    if (itemName === EASTER_EGG_ITEM_NAME) {
+      this.easterEggItemDropped = true;
+    }
+    this.message = `${itemName}을(를) 버렸습니다.`;
+    this.updateStatus();
+    return true;
+  }
+
 
   equipInventorySlot(index) {
     // 슬롯 번호가 잘못된 경우
@@ -1246,6 +1350,11 @@ export class EscapeGame {
       return false;
     }
 
+    if (key === "q") {
+      this.dropHeldItem();
+      return false;
+    }
+
     if (!this.easterEggItemObtained && this.easterEggDoorKeyHeld && /^[1-7]$/.test(key)) {
       const sequence = ["3", "2", "7"];
       const expectedKey = sequence[this.easterEggDoorSequence];
@@ -1423,6 +1532,11 @@ export class EscapeGame {
       this.stairTransitionLocked = false;
     }
 
+    if (tile === TILE.DROPPED_ITEM) {
+      this.pickupDroppedItem(cell.x, cell.y);
+      return;
+    }
+
     if (tile === TILE.EASTER_EGG_ITEM) {
       if (this.heldItem === null) {
         this.heldItem = EASTER_EGG_ITEM_NAME;
@@ -1434,6 +1548,7 @@ export class EscapeGame {
       }
 
       this.easterEggItemObtained = true;
+      this.easterEggItemDropped = false;
       this.map[cell.y][cell.x] = TILE.FLOOR;
       this.message = `${EASTER_EGG_ITEM_NAME}을(를) 획득했습니다. 보관함이 1칸 늘어났습니다.`;
       this.updateStatus();
@@ -1692,6 +1807,29 @@ export class EscapeGame {
     this.heldDirections.clear();
     this.lastPressedDirection = null;
     this.message = `${EASTER_EGG_ITEM_NAME}을(를) 획득했습니다. 스폰 지점으로 돌아왔습니다.`;
+    this.updateStatus();
+  }
+
+  pickupDroppedItem(x, y) {
+    const droppedItem = this.getDroppedItemAt(this.currentFloor, x, y);
+    if (!droppedItem) return;
+
+    if (this.heldItem === null) {
+      this.heldItem = droppedItem.name;
+    } else if (this.inventory.length < this.getInventoryCapacity()) {
+      this.inventory.push(droppedItem.name);
+    } else {
+      this.message = "보관함이 가득 차서 아이템을 주울 수 없습니다.";
+      return;
+    }
+
+    this.droppedItems = this.droppedItems.filter((item) => item !== droppedItem);
+    this.map[y][x] = TILE.FLOOR;
+    if (droppedItem.name === EASTER_EGG_ITEM_NAME) {
+      this.easterEggItemObtained = true;
+      this.easterEggItemDropped = false;
+    }
+    this.message = `${droppedItem.name}을(를) 주웠습니다.`;
     this.updateStatus();
   }
 
