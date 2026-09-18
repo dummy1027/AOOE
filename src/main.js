@@ -32,8 +32,10 @@ window.addEventListener("keydown", (event) => {
   }
   if (event.key === "Escape") {
     event.preventDefault(); event.stopImmediatePropagation();
-    if (overlay.style.display === "none") { game.pause(); show("pause"); }
-    else if (!screens.pause.hidden) { hideOverlay(); game.resume(); }
+    if (overlay.style.display === "none") {
+      if (!game.closeInventory()) { game.pause(); show("pause"); }
+    } else if (!screens.pause.hidden) { hideOverlay(); game.resume(); }
+    else if (!screens.settings.hidden) { listeningFor = null; show(previousScreen); }
   }
 }, true);
 game.onJumpscare = () => { jumpscareScreen.hidden = false; };
