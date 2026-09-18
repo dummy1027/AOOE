@@ -253,13 +253,16 @@ export class EscapeGame {
     p.setup = () => { p.createCanvas(320, 320); p.frameRate(30); p.noSmooth(); p.textFont("sans-serif"); this.resizeCanvas(p); this.updateStatus(); p.noLoop(); };
     p.draw = () => this.draw(p);
 
-    p.keyPressed = () => {
-      this.handleKey(p, p.key.toLowerCase());
+    p.keyPressed = (event) => {
+      const key = event?.key?.toLowerCase() ?? p.key.toLowerCase();
+      if (event?.repeat && this.heldDirections.has(key)) return false;
+      this.handleKey(p, key);
       return false;
     };
 
-    p.keyReleased = () => {
-      this.handleKeyReleased(p.key.toLowerCase());
+    p.keyReleased = (event) => {
+      const key = event?.key?.toLowerCase() ?? p.key.toLowerCase();
+      this.handleKeyReleased(key);
       return false;
     };
 
