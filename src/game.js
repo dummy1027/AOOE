@@ -10,6 +10,13 @@ const MONSTER_SPEED_PX = 170;
 
 const SPRITE_FOLDER = "images/";
 
+const FLASHLIGHT_DIAMETER = 100;
+const FLASHLIGHT_RADIUS = FLASHLIGHT_DIAMETER / 2;
+const FLASHLIGHT_HALF_ANGLE = Math.PI / 5;
+const FLASHLIGHT_RAY_COUNT = 40;
+const FLASHLIGHT_RANGE = 360;
+const FLASHLIGHT_STEP = 4;
+
 const TILE = {
   FLOOR: 0,
   WALL: 1,
@@ -2280,16 +2287,102 @@ export class EscapeGame {
       }`;
   }
 
-  drawFlashlight(p, lightX, lightY) {
-    const context = p.drawingContext;
-    context.save();
-    context.fillStyle = "rgba(0, 0, 0, 0.26)";
-    context.beginPath();
-    context.rect(0, 0, p.width, p.height);
-    context.arc(lightX, lightY, 300, 0, p.TWO_PI);
-    context.fill("evenodd");
-    context.restore();
+ drawFlashlight(p, lightX, lightY) {
+  const context = p.drawingContext;
+
+  // 플레이어의 실제 월드 좌표
+  const playerWorldX = this.player.px + TILE_SIZE / 2;
+  const playerWorldY = this.player.py + TILE_SIZE / 2;
+
+  // 플레이어가 바라보는 방향
+  const direction = {
+    W: -Math.PI / 2,
+    A: Math.PI,
+    S: Math.PI / 2,
+    D: 0,
+  }[this.player.direction] ?? 0;
+
+  const startAngle = direction - FLASHLIGHT_HALF_ANGLE;
+  const endAngle = direction + FLASHLIGHT_HALF_ANGLE;
+
+  // 월드 → 화면 좌표 변환
+  const cameraX = lightX - playerWorldX;
+  const cameraY = lightY - playerWorldY;
+
+  const rayPoints = [];
+
+  for (let i = 0; i <= FLASHLIGHT_RAY_COUNT; i++) {
+    const angle =
+      startAngle +
+      (endAngle - startAngle) * (i / FLASHLIGHT_RAY_COUNT);
+
+    let distance = FLASHLIGHT_RADIUS;
+
+    while (distance < FLASHLIGHT_RANGE) {
+      const worldX =
+        playerWorldX + Math.cos(angle) * distance;
+      const worldY =
+        playerWorldY + Math.sin(angle) * distance;
+
+      const tileX = Math.floor(worldX / TILE_SIZE);
+      const tileY = Math.floor(worldY / TILE_SIZE);
+
+      const tile = this.getTile(tileX, tileY);
+
+      // 벽 / 책장 / 잠긴 문에서 빛 차단
+      if (
+        tile === undefined ||
+        tile === TILE.WALL ||
+        tile === TILE.BOOKSHELF ||
+        tile === TILE.LOCKED_DOOR
+      ) {
+        break;
+      }
+
+      distance += FLASHLIGHT_STEP;
+    }
+
+    rayPoints.push({
+      x: lightX + Math.cos(angle) * distance,
+      y: lightY + Math.sin(angle) * distance,
+    });
   }
+
+  context.save();
+
+  // 화면 전체 어둡게
+  context.fillStyle = "rgba(0, 0, 0, 0.82)";
+  context.beginPath();
+
+  context.rect(0, 0, p.width, p.height);
+
+  // 플레이어 주변 45px 원
+  context.moveTo(
+    lightX + FLASHLIGHT_RADIUS,
+    lightY
+  );
+
+  context.arc(
+    lightX,
+    lightY,
+    FLASHLIGHT_RADIUS,
+    0,
+    Math.PI * 2
+  );
+
+  // 빛 원뿔
+  context.moveTo(lightX, lightY);
+
+  for (const point of rayPoints) {
+    context.lineTo(point.x, point.y);
+  }
+
+  context.closePath();
+
+  context.fill("evenodd");
+
+  context.restore();
+}
 
   drawMessage(p) {
     p.fill(0, 0, 0, 195);
