@@ -25,6 +25,7 @@ const DIRECTIONS = [
   { key: "s", x: 0, y: 1, sprite: "S" },
   { key: "d", x: 1, y: 0, sprite: "D" },
 ];
+const DEVELOPER_KEYS = new Set(["i", "o", "p"]);
 
 // 0: 길
 // 1: 벽
@@ -203,6 +204,8 @@ export class EscapeGame {
 
     // 현재 누르고 있는 방향
     this.heldDirections = new Set();
+    this.heldDeveloperKeys = new Set();
+    this.developerUnlockTriggered = false;
 
     this.inventoryOpen = false;
 
@@ -221,7 +224,13 @@ export class EscapeGame {
     this.updateStatus();
   }
 
-  pause() { this.paused = true; this.heldDirections.clear(); this.sketch?.noLoop(); }
+  pause() {
+    this.paused = true;
+    this.heldDirections.clear();
+    this.heldDeveloperKeys.clear();
+    this.developerUnlockTriggered = false;
+    this.sketch?.noLoop();
+  }
   resume() { if (!this.ended) { this.paused = false; this.sketch?.loop(); } }
   getBinding(action) { return this.controls[action]; }
   setBinding(action, key) {
@@ -1141,6 +1150,15 @@ export class EscapeGame {
       return false;
     }
 
+    if (DEVELOPER_KEYS.has(key)) {
+      this.heldDeveloperKeys.add(key);
+      if (!this.developerUnlockTriggered && this.heldDeveloperKeys.size === DEVELOPER_KEYS.size) {
+        this.unlockAllDoors();
+        this.developerUnlockTriggered = true;
+      }
+      return false;
+    }
+
     if (key === this.controls.inventory) {
       this.inventoryOpen = !this.inventoryOpen;
 
@@ -1184,6 +1202,11 @@ export class EscapeGame {
   }
 
   handleKeyReleased(key) {
+    if (DEVELOPER_KEYS.has(key)) {
+      this.heldDeveloperKeys.delete(key);
+      this.developerUnlockTriggered = false;
+    }
+
     // 키를 떼면 반드시 제거
     this.heldDirections.delete(key);
 
@@ -1408,6 +1431,23 @@ export class EscapeGame {
     }
 
     return null;
+  }
+
+  unlockAllDoors() {
+    let openedCount = 0;
+
+    for (const door of DOORS) {
+      for (const tile of door.tiles) {
+        if (this.floorMaps[door.floor][tile.y][tile.x] === TILE.LOCKED_DOOR) {
+          this.floorMaps[door.floor][tile.y][tile.x] = TILE.OPEN_DOOR;
+          openedCount++;
+        }
+      }
+    }
+
+    this.map = this.floorMaps[this.currentFloor];
+    this.message = `개발자 모드: 잠긴 문 ${openedCount}개를 모두 개방했습니다.`;
+    this.updateStatus();
   }
 
   interact() {
