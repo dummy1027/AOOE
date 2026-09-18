@@ -17,6 +17,7 @@ const TILE = {
   EXIT: 4,
   OPEN_DOOR: 5,
   STAIRS: 6,
+  BOOKSHELF: 7,
 };
 
 const DIRECTIONS = [
@@ -33,6 +34,7 @@ const DIRECTIONS = [
 // 4: 출구
 // 5: 열린 문
 // 6: 계단
+// 7: 책장
 const INITIAL_MAP = [
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
   [1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 6, 6, 6, 1, 1, 0, 0, 0, 1],
@@ -41,7 +43,7 @@ const INITIAL_MAP = [
   [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 6, 6, 6, 1, 1, 0, 0, 0, 1],
   [1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 6, 6, 6, 1, 1, 0, 0, 0, 1],
   [1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1],
-  [1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 5, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1],
+  [1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 5, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
   [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
   [1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 5, 5, 1, 1, 1, 1, 1, 1],
   [1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -97,10 +99,41 @@ const SECOND_FLOOR_MAP = [
   [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1],
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ];
+
+const THIRD_FLOOR_MAP = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,1,6,6,6,1,1,6,6,6,1],
+  [1,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,6,6,6,1,1,6,6,6,1],
+  [1,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,6,6,6,1,1,6,6,6,1],
+  [1,7,0,0,0,7,7,7,7,7,7,7,0,0,7,7,0,0,0,0,1,6,6,6,1,1,6,6,6,1],
+  [1,7,0,0,0,7,7,7,7,7,7,7,0,0,7,7,0,0,0,0,1,6,6,6,1,1,6,6,6,1],
+  [1,7,0,0,0,0,0,0,0,0,0,0,0,0,7,7,0,0,0,0,1,6,6,6,1,1,6,6,6,1],
+  [1,7,0,0,0,0,0,0,0,0,0,0,0,0,7,7,0,0,0,0,1,0,0,0,1,1,0,0,0,1],
+  [1,7,0,0,0,0,0,0,0,0,0,0,0,0,7,7,0,0,0,0,1,0,0,0,1,1,0,0,0,1],
+  [1,7,0,0,0,7,7,7,7,7,7,7,0,0,7,7,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+  [1,7,0,0,0,7,7,7,7,7,7,7,0,0,7,7,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+  [1,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,5,1,1,1,1,1,1,1],
+  [1,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1],
+  [1,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1],
+  [1,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1],
+  [1,7,0,0,0,7,7,7,7,7,7,7,0,0,7,7,0,0,0,0,1,0,0,0,0,1,0,0,0,1],
+  [1,7,0,0,0,7,7,7,7,7,7,7,0,0,7,7,0,0,0,0,5,0,0,0,0,1,0,0,0,1],
+  [1,7,0,0,0,0,0,0,0,0,0,0,0,0,7,7,0,0,0,0,5,0,0,0,0,1,0,0,0,1],
+  [1,7,0,0,0,0,0,0,0,0,0,0,0,0,7,7,0,0,0,0,1,0,0,0,0,1,0,0,0,1],
+  [1,7,0,0,0,0,0,0,0,0,0,0,0,0,7,7,0,0,0,0,1,1,1,1,1,1,1,1,1,1],
+  [1,7,0,0,0,7,7,7,7,7,7,7,0,0,7,7,0,0,0,0,0,0,0,0,0,0,0,0,7,1],
+  [1,7,0,0,0,7,7,7,7,7,7,7,0,0,7,7,0,0,0,0,0,0,0,0,0,0,0,0,7,1],
+  [1,7,0,0,0,0,0,0,0,0,0,0,0,0,7,7,0,0,0,7,7,7,7,7,7,7,0,0,7,1],
+  [1,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,7,7,7,7,7,7,0,0,7,1],
+  [1,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,1],
+  [1,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
 const SPAWN = { x: 2, y: 1 };
 const EXIT_POSITION = { x: 28, y: 28 };
 const MONSTER_SPAWN = { x: 15, y: 12 };
-const SECOND_FLOOR_SPAWN = { x: 28, y: 7 };
+const SECOND_FLOOR_SPAWN = { x: 27, y: 7 };
+const THIRD_FLOOR_SPAWN = { x: 27, y: 7 };
 
 // ============================================================
 // 회사 테마: 문 & 카드키 정의
@@ -167,6 +200,7 @@ export class EscapeGame {
     this.floorMaps = [
       INITIAL_MAP.map((row) => [...row]),
       SECOND_FLOOR_MAP.map((row) => [...row]),
+      THIRD_FLOOR_MAP.map((row) => [...row]),
     ];
 
     // 열쇠 배치 초기화
@@ -328,8 +362,9 @@ export class EscapeGame {
   drawMap(p) {
     // 바닥 색상: 1층은 따뜻한 회사 로비 / 2층은 차가운 사무실 톤
     const isFloor2 = this.currentFloor === 1;
-    const floorColor = isFloor2 ? [28, 34, 45] : [35, 30, 42];
-    const wallColor  = isFloor2 ? [50, 60, 80] : [58, 48, 72];
+    const isFloor3 = this.currentFloor === 2;
+    const floorColor = isFloor2 ? [28, 34, 45] : isFloor3 ? [20, 25, 30] : [35, 30, 42];
+    const wallColor  = isFloor2 ? [50, 60, 80] : isFloor3 ? [40, 45, 50] : [58, 48, 72];
 
     const colors = {
       0: floorColor,
@@ -339,6 +374,7 @@ export class EscapeGame {
       4: [35, 180, 100],
       5: [145, 97, 48],
       6: [54, 105, 155],
+      7: [169, 177, 0],
     };
 
     this.map.forEach((row, y) => {
@@ -1236,32 +1272,15 @@ export class EscapeGame {
   }
 
   movePlayerContinuous(dx, dy) {
-    let moveX = dx;
-    let moveY = dy;
-    const nextPx = this.player.px + moveX;
-    const nextPy = this.player.py + moveY;
+    const nextPx = this.player.px + dx;
+    const nextPy = this.player.py + dy;
 
-    if (!this.canOccupyPixel(nextPx, nextPy)) {
-      const lastDirection = this.directionForKey(this.lastPressedDirection);
-      const tryHorizontalFirst = lastDirection?.x !== 0;
-      const candidates = tryHorizontalFirst
-        ? [[dx, 0], [0, dy]]
-        : [[0, dy], [dx, 0]];
-      const availableMove = candidates.find(([candidateX, candidateY]) =>
-        this.canOccupyPixel(this.player.px + candidateX, this.player.py + candidateY)
-      );
+    if (!this.canOccupyPixel(nextPx, nextPy)) return;
 
-      if (!availableMove) return;
-      [moveX, moveY] = availableMove;
-    }
-
-    const nextMoveX = this.player.px + moveX;
-    const nextMoveY = this.player.py + moveY;
-
-    this.player.px = nextMoveX;
-    this.player.py = nextMoveY;
-    this.player.x = nextMoveX / TILE_SIZE;
-    this.player.y = nextMoveY / TILE_SIZE;
+    this.player.px = nextPx;
+    this.player.py = nextPy;
+    this.player.x = nextPx / TILE_SIZE;
+    this.player.y = nextPy / TILE_SIZE;
 
     const cell = this.getActorCell(this.player);
     const tile = this.getTile(cell.x, cell.y);
@@ -1307,23 +1326,48 @@ export class EscapeGame {
   }
 
   changeFloor() {
-    if (this.currentFloor === 0) {
-      // 1층 → 2층
-      this.currentFloor = 1;
-      this.map = this.floorMaps[1];
+  const cell = this.getActorCell(this.player);
+
+  if (this.currentFloor === 0) {
+    // 1층 → 2층
+    this.currentFloor = 1;
+    this.map = SECOND_FLOOR_MAP.map((row) => [...row]);
+
+    // 1층 계단 → 2층 왼쪽 계단
+    this.player = this.createActor(
+      22,
+      7,
+      "S",
+      PLAYER_SPEED_PX
+    );
+
+    this.message = "2층으로 올라왔습니다.";
+
+  } else if (this.currentFloor === 1) {
+    if (cell.x >= 26) {
+      // 2층 오른쪽 계단 → 3층 왼쪽 계단
+      this.currentFloor = 2;
+      this.map = THIRD_FLOOR_MAP.map((row) => [...row]);
 
       this.player = this.createActor(
-        SECOND_FLOOR_SPAWN.x,
-        SECOND_FLOOR_SPAWN.y,
+        22,
+        7,
         "S",
         PLAYER_SPEED_PX
       );
 
-      this.message = "[2층 사무실] 카드키로 각 부서 출입문을 개방하세요.";
+      this.message = "3층으로 올라왔습니다.";
+
     } else {
-      // 2층 → 1층
+      // 2층 왼쪽 계단 → 1층
       this.currentFloor = 0;
-      this.map = this.floorMaps[0];
+      this.map = INITIAL_MAP.map((row) => [...row]);
+
+      if (!this.inventory.includes("key")) {
+        this.map[KEY_POSITION.y][KEY_POSITION.x] = TILE.KEY;
+      }
+
+      this.map[EXIT_POSITION.y][EXIT_POSITION.x] = TILE.EXIT;
 
       this.player = this.createActor(
         22,
@@ -1332,14 +1376,30 @@ export class EscapeGame {
         PLAYER_SPEED_PX
       );
 
-      this.message = "[1층 로비] 로비 출입증으로 보안 구역을 통과하세요.";
+      this.message = "1층으로 내려왔습니다.";
     }
 
-    this.heldDirections.clear();
-    this.lastPressedDirection = null;
-    this.monster.active = false;
-    this.updateStatus();
+  } else {
+    // 3층 → 2층
+    this.currentFloor = 1;
+    this.map = SECOND_FLOOR_MAP.map((row) => [...row]);
+
+    // 3층 계단 → 2층 왼쪽 계단
+    this.player = this.createActor(
+      22,
+      7,
+      "S",
+      PLAYER_SPEED_PX
+    );
+
+    this.message = "2층으로 내려왔습니다.";
   }
+
+  this.heldDirections.clear();
+  this.lastPressedDirection = null;
+  this.monster.active = false;
+  this.updateStatus();
+}
 
   getConnectedDoors(startX, startY) {
     const visited = new Set();
