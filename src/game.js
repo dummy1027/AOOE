@@ -1236,15 +1236,32 @@ export class EscapeGame {
   }
 
   movePlayerContinuous(dx, dy) {
-    const nextPx = this.player.px + dx;
-    const nextPy = this.player.py + dy;
+    let moveX = dx;
+    let moveY = dy;
+    const nextPx = this.player.px + moveX;
+    const nextPy = this.player.py + moveY;
 
-    if (!this.canOccupyPixel(nextPx, nextPy)) return;
+    if (!this.canOccupyPixel(nextPx, nextPy)) {
+      const lastDirection = this.directionForKey(this.lastPressedDirection);
+      const tryHorizontalFirst = lastDirection?.x !== 0;
+      const candidates = tryHorizontalFirst
+        ? [[dx, 0], [0, dy]]
+        : [[0, dy], [dx, 0]];
+      const availableMove = candidates.find(([candidateX, candidateY]) =>
+        this.canOccupyPixel(this.player.px + candidateX, this.player.py + candidateY)
+      );
 
-    this.player.px = nextPx;
-    this.player.py = nextPy;
-    this.player.x = nextPx / TILE_SIZE;
-    this.player.y = nextPy / TILE_SIZE;
+      if (!availableMove) return;
+      [moveX, moveY] = availableMove;
+    }
+
+    const nextMoveX = this.player.px + moveX;
+    const nextMoveY = this.player.py + moveY;
+
+    this.player.px = nextMoveX;
+    this.player.py = nextMoveY;
+    this.player.x = nextMoveX / TILE_SIZE;
+    this.player.y = nextMoveY / TILE_SIZE;
 
     const cell = this.getActorCell(this.player);
     const tile = this.getTile(cell.x, cell.y);
