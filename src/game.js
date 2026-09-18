@@ -275,6 +275,7 @@ export class EscapeGame {
     this.specialDoorPosition = null;
 
     this.inventoryOpen = false;
+    this.inventoryDrag = null;
 
     // 가장 최근에 누른 방향
     this.lastPressedDirection = null;
@@ -317,6 +318,7 @@ export class EscapeGame {
   closeInventory() {
     if (!this.inventoryOpen) return false;
     this.inventoryOpen = false;
+    this.inventoryDrag = null;
     this.updateStatus();
     return true;
   }
@@ -391,12 +393,23 @@ export class EscapeGame {
     };
 
     p.mousePressed = () => {
-      if (this.inventoryOpen) {
-        if (p.mouseButton === p.RIGHT) {
-          this.handleInventoryDrop(p.mouseX, p.mouseY);
-        } else {
-          this.handleInventoryClick(p.mouseX, p.mouseY);
-        }
+      if (this.inventoryOpen && p.mouseButton === p.LEFT) {
+        this.beginInventoryDrag(p.mouseX, p.mouseY);
+        return false;
+      }
+    };
+
+    p.mouseDragged = () => {
+      if (this.inventoryDrag) {
+        this.inventoryDrag.x = p.mouseX;
+        this.inventoryDrag.y = p.mouseY;
+        return false;
+      }
+    };
+
+    p.mouseReleased = () => {
+      if (this.inventoryDrag) {
+        this.finishInventoryDrag(p.mouseX, p.mouseY);
         return false;
       }
     };
@@ -991,6 +1004,8 @@ export class EscapeGame {
 
       // 실제 아이템이 있다면 표시
       if (this.inventory[index]) {
+        const isDraggedSlot = this.inventoryDrag?.type === "slot" && this.inventoryDrag.index === index;
+        if (isDraggedSlot) continue;
         p.fill(245);
         p.textAlign(p.CENTER, p.CENTER);
         p.textSize(15);
@@ -1003,6 +1018,31 @@ export class EscapeGame {
       }
     }
 
+    if (this.inventoryDrag) {
+      const itemName = this.inventoryDrag.type === "hand"
+        ? this.heldItem
+        : this.inventory[this.inventoryDrag.index];
+      if (itemName) {
+        p.push();
+        p.fill(15, 15, 22, 235);
+        p.stroke(75, 75, 95);
+        p.strokeWeight(2);
+        p.rect(
+          this.inventoryDrag.x - slotSize / 2,
+          this.inventoryDrag.y - slotSize / 2,
+          slotSize,
+          slotSize,
+          8
+        );
+        p.noStroke();
+        p.fill(255);
+        p.textAlign(p.CENTER, p.CENTER);
+        p.textSize(15);
+        p.text(itemName, this.inventoryDrag.x, this.inventoryDrag.y);
+        p.pop();
+      }
+    }
+
     // =========================
     // 하단 안내
     // =========================
@@ -1012,7 +1052,7 @@ export class EscapeGame {
     p.textSize(13);
 
     p.text(
-      `1-${slotCount} 또는 슬롯 클릭 · F 키로 닫기`,
+      `좌클릭 드래그 · 1-${slotCount} 선택 · F 키로 닫기`,
       panelX + panelWidth / 2,
       panelY + panelHeight - 18
     );
@@ -1050,6 +1090,7 @@ export class EscapeGame {
     const startX = inventoryX + (inventoryWidth - (slotSize * 3 + gap * 2)) / 2;
 
     return {
+      panel: { x: panelX, y: panelY, width: panelWidth, height: panelHeight },
       handSlot,
       slots: Array.from({ length: slotCount }, (_, index) => ({
         x: startX + (index % 3) * (slotSize + gap),
@@ -1086,35 +1127,90 @@ export class EscapeGame {
     }
   }
 
-  handleInventoryDrop(x, y) {
+  beginInventoryDrag(x, y) {
     const { handSlot, slots } = this.getInventorySlotBounds();
     const contains = (slot) => (
       x >= slot.x && x <= slot.x + slot.size &&
       y >= slot.y && y <= slot.y + slot.size
     );
 
-    if (contains(handSlot)) {
-      this.dropHeldItem();
+    if (contains(handSlot) && this.heldItem !== null) {
+      this.inventoryDrag = { type: "hand", x, y };
       return;
     }
 
-    const slotIndex = slots.findIndex((slot) => (
-      x >= slot.x && x <= slot.x + slot.size &&
-      y >= slot.y && y <= slot.y + slot.size
-    ));
-
-    if (slotIndex !== -1) {
-      this.dropInventoryItem(slotIndex);
+    const slotIndex = slots.findIndex(contains);
+    if (slotIndex !== -1 && this.inventory[slotIndex]) {
+      this.inventoryDrag = { type: "slot", index: slotIndex, x, y };
     }
   }
 
-  dropInventoryItem(index) {
-    if (!this.inventory[index]) return;
+  finishInventoryDrag(x, y) {
+    const drag = this.inventoryDrag;
+    this.inventoryDrag = null;
+    if (!drag) return;
 
-    const itemName = this.inventory[index];
-    if (this.dropItem(itemName)) {
-      this.inventory.splice(index, 1);
+    const { handSlot, slots, panel } = this.getInventorySlotBounds();
+    const contains = (slot) => (
+      x >= slot.x && x <= slot.x + slot.size &&
+      y >= slot.y && y <= slot.y + slot.size
+    );
+    const targetSlot = slots.findIndex(contains);
+    const targetHand = contains(handSlot);
+
+    if (!targetHand && targetSlot === -1) {
+      const insidePanel = (
+        x >= panel.x && x <= panel.x + panel.width &&
+        y >= panel.y && y <= panel.y + panel.height
+      );
+      if (insidePanel && slots.length > 0) {
+        const nearestSlot = slots.reduce((nearest, slot, index) => {
+          const distance = Math.hypot(
+            x - (slot.x + slot.size / 2),
+            y - (slot.y + slot.size / 2)
+          );
+          return distance < nearest.distance ? { index, distance } : nearest;
+        }, { index: 0, distance: Infinity });
+        return this.finishInventoryDragAtSlot(drag, nearestSlot.index);
+      }
+      const itemName = drag.type === "hand" ? this.heldItem : this.inventory[drag.index];
+      if (itemName !== undefined && this.dropItem(itemName)) {
+        if (drag.type === "hand") this.heldItem = null;
+        else this.inventory.splice(drag.index, 1);
+      }
+      return;
     }
+
+    if (targetSlot === -1 && !targetHand) return;
+
+    this.finishInventoryDragAtSlot(drag, targetSlot, targetHand);
+  }
+
+  finishInventoryDragAtSlot(drag, targetSlot, targetHand = false) {
+
+    if (drag.type === "hand") {
+      if (targetHand) return;
+      if (targetSlot >= this.getInventoryCapacity()) return;
+      if (targetSlot < this.inventory.length) {
+        [this.heldItem, this.inventory[targetSlot]] = [this.inventory[targetSlot], this.heldItem];
+      } else {
+        this.inventory[targetSlot] = this.heldItem;
+        this.heldItem = null;
+      }
+    } else if (targetHand) {
+      if (this.heldItem === null) {
+        this.heldItem = this.inventory.splice(drag.index, 1)[0];
+      } else {
+        [this.heldItem, this.inventory[drag.index]] = [this.inventory[drag.index], this.heldItem];
+      }
+    } else if (targetSlot !== -1 && targetSlot !== drag.index) {
+      [this.inventory[drag.index], this.inventory[targetSlot]] = [
+        this.inventory[targetSlot],
+        this.inventory[drag.index],
+      ];
+    }
+
+    this.updateStatus();
   }
 
   dropHeldItem() {
