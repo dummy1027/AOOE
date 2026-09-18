@@ -17,6 +17,9 @@ const TILE = {
   EXIT: 4,
   OPEN_DOOR: 5,
   STAIRS: 6,
+  BOOKSHELF: 7,
+  DROPPED_ITEM: 8,
+  EASTER_EGG_ITEM: 9,
 };
 
 const DIRECTIONS = [
@@ -133,6 +136,18 @@ const SPAWN = { x: 2, y: 1 };
 const EXIT_POSITION = { x: 28, y: 28 };
 const MONSTER_SPAWN = { x: 15, y: 12 };
 const SECOND_FLOOR_SPAWN = { x: 28, y: 7 };
+const EASTER_EGG_ITEM_NAME = "폐회사의 가방 마스코트 인형";
+const EASTER_EGG_ITEM_POSITION = { floor: 3, x: 4, y: 2 };
+const EASTER_EGG_ROOM_ENTRY = { x: 4, y: 6 };
+
+const EASTER_EGG_FLOOR_MAP = Array.from({ length: 9 }, (_, y) =>
+  Array.from({ length: 9 }, (_, x) => (
+    x >= 2 && x <= 6 && y >= 1 && y <= 7 &&
+    !(x === 2 || x === 6 || y === 1 || y === 7)
+      ? TILE.FLOOR
+      : TILE.WALL
+  ))
+);
 
 // ============================================================
 // 회사 테마: 문 & 카드키 정의
@@ -199,6 +214,8 @@ export class EscapeGame {
     this.floorMaps = [
       INITIAL_MAP.map((row) => [...row]),
       SECOND_FLOOR_MAP.map((row) => [...row]),
+      THIRD_FLOOR_MAP.map((row) => [...row]),
+      EASTER_EGG_FLOOR_MAP.map((row) => [...row]),
     ];
 
     // 열쇠 배치 초기화
@@ -440,6 +457,7 @@ export class EscapeGame {
     // 바닥 색상: 1층은 따뜻한 회사 로비 / 2층은 차가운 사무실 톤
     const isFloor2 = this.currentFloor === 1;
     const isFloor3 = this.currentFloor === 2;
+    const isEasterEggFloor = this.currentFloor === 3;
     const floorColor = isFloor2 ? [28, 34, 45] : isFloor3 ? [20, 25, 30] : [35, 30, 42];
     const wallColor  = isFloor2 ? [50, 60, 80] : isFloor3 ? [40, 45, 50] : [58, 48, 72];
 
@@ -451,6 +469,9 @@ export class EscapeGame {
       4: [35, 180, 100],
       5: [145, 97, 48],
       6: [54, 105, 155],
+      7: [169, 171, 0],
+      8: [165, 125, 75],
+      9: [180, 85, 155],
     };
 
     this.map.forEach((row, y) => {
@@ -1523,26 +1544,43 @@ export class EscapeGame {
   }
 
   movePlayerContinuous(dx, dy) {
-    const nextPx = this.player.px + dx;
-    const nextPy = this.player.py + dy;
+    let moveX = dx;
+    let moveY = dy;
+    const nextPx = this.player.px + moveX;
+    const nextPy = this.player.py + moveY;
 
-    if (!this.canOccupyPixel(nextPx, nextPy)) return;
+    if (!this.canOccupyPixel(nextPx, nextPy)) {
+      const lastDirection = this.directionForKey(this.lastPressedDirection);
+      const candidates = lastDirection?.x !== 0
+        ? [[dx, 0], [0, dy]]
+        : [[0, dy], [dx, 0]];
+      const availableMove = candidates.find(([candidateX, candidateY]) =>
+        this.canOccupyPixel(this.player.px + candidateX, this.player.py + candidateY)
+      );
 
-    this.player.px = nextPx;
-    this.player.py = nextPy;
-    this.player.x = nextPx / TILE_SIZE;
-    this.player.y = nextPy / TILE_SIZE;
+      if (!availableMove) return;
+      [moveX, moveY] = availableMove;
+    }
+
+    const nextMoveX = this.player.px + moveX;
+    const nextMoveY = this.player.py + moveY;
+
+    this.player.px = nextMoveX;
+    this.player.py = nextMoveY;
+    this.player.x = nextMoveX / TILE_SIZE;
+    this.player.y = nextMoveY / TILE_SIZE;
 
     const cell = this.getActorCell(this.player);
+    const stairCell = this.getStairCell(this.player);
     const tile = this.getTile(cell.x, cell.y);
 
     // 계단 판정
-    if (tile === TILE.STAIRS && !this.stairTransitionLocked) {
+    if (stairCell && !this.stairTransitionLocked) {
       this.stairTransitionLocked = true;
-      this.changeFloor();
+      this.changeFloor(stairCell);
       return;
     }
-    if (tile !== TILE.STAIRS) {
+    if (!stairCell) {
       this.stairTransitionLocked = false;
     }
 
@@ -1600,81 +1638,37 @@ export class EscapeGame {
     }
   }
 
-  changeFloor() {
-  const cell = this.getActorCell(this.player);
+  changeFloor(stairCell = this.getActorCell(this.player)) {
+    if (this.currentFloor >= 2) return;
 
-  if (this.currentFloor === 0) {
-    // 1층 → 2층
-    this.currentFloor = 1;
-    this.map = SECOND_FLOOR_MAP.map((row) => [...row]);
+    const cell = stairCell;
+    let nextFloor;
+    let spawn;
 
-    // 1층 계단 → 2층 왼쪽 계단
-    this.player = this.createActor(
-      22,
-      7,
-      "S",
-      PLAYER_SPEED_PX
-    );
-
-    this.message = "2층으로 올라왔습니다.";
-
-  } else if (this.currentFloor === 1) {
-    if (cell.x >= 26) {
-      // 2층 오른쪽 계단 → 3층 왼쪽 계단
-      this.currentFloor = 2;
-      this.map = THIRD_FLOOR_MAP.map((row) => [...row]);
-
-      this.player = this.createActor(
-        22,
-        7,
-        "S",
-        PLAYER_SPEED_PX
-      );
-
-      this.message = "3층으로 올라왔습니다.";
-
+    if (this.currentFloor === 0) {
+      nextFloor = 1;
+      spawn = { x: 22, y: 7 };
+    } else if (this.currentFloor === 1 && cell.x >= 25) {
+      nextFloor = 2;
+      spawn = { x: 27, y: 7 };
+    } else if (this.currentFloor === 1) {
+      nextFloor = 0;
+      spawn = { x: 22, y: 6 };
     } else {
-      // 2층 왼쪽 계단 → 1층
-      this.currentFloor = 0;
-      this.map = INITIAL_MAP.map((row) => [...row]);
-
-      if (!this.inventory.includes("key")) {
-        this.map[KEY_POSITION.y][KEY_POSITION.x] = TILE.KEY;
-      }
-
-      this.map[EXIT_POSITION.y][EXIT_POSITION.x] = TILE.EXIT;
-
-      this.player = this.createActor(
-        22,
-        6,
-        "S",
-        PLAYER_SPEED_PX
-      );
-
-      this.message = "1층으로 내려왔습니다.";
+      nextFloor = 1;
+      spawn = { x: 22, y: 7 };
     }
 
-  } else {
-    // 3층 → 2층
-    this.currentFloor = 1;
-    this.map = SECOND_FLOOR_MAP.map((row) => [...row]);
+    this.currentFloor = nextFloor;
+    this.map = this.floorMaps[nextFloor];
+    this.player = this.createActor(spawn.x, spawn.y, "S", PLAYER_SPEED_PX);
+    this.message = `${nextFloor + 1}층으로 이동했습니다.`;
 
-    // 3층 계단 → 2층 왼쪽 계단
-    this.player = this.createActor(
-      22,
-      7,
-      "S",
-      PLAYER_SPEED_PX
-    );
-
-    this.message = "2층으로 내려왔습니다.";
+    this.heldDirections.clear();
+    this.lastPressedDirection = null;
+    this.monster.active = false;
+    this.updateStatus();
   }
-
-  this.heldDirections.clear();
-  this.lastPressedDirection = null;
-  this.monster.active = false;
-  this.updateStatus();
-}
 
   getConnectedDoors(startX, startY) {
     const visited = new Set();
@@ -1839,7 +1833,7 @@ export class EscapeGame {
     this.easterEggDoorArmed = false;
     this.heldDirections.clear();
     this.lastPressedDirection = null;
-    this.message = "이스터에그 공간으로 이동했습니다.";
+    this.message = "327층 이스터에그 공간으로 이동했습니다.";
     this.updateStatus();
     return true;
   }
@@ -2040,7 +2034,7 @@ export class EscapeGame {
   }
 
   isPlayerWalkable(x, y) {
-    return ![undefined, TILE.WALL, TILE.LOCKED_DOOR].includes(this.getTile(x, y));
+    return ![undefined, TILE.WALL, TILE.BOOKSHELF, TILE.LOCKED_DOOR].includes(this.getTile(x, y));
   }
 
   isMonsterWalkable(x, y) {
@@ -2105,6 +2099,22 @@ export class EscapeGame {
       x: Math.floor((hitbox.left + hitbox.right) / 2 / TILE_SIZE),
       y: Math.floor(hitbox.bottom / TILE_SIZE),
     };
+  }
+
+  getStairCell(actor) {
+    const hitbox = this.getFootHitbox(actor);
+    const left = Math.floor(hitbox.left / TILE_SIZE);
+    const right = Math.floor(hitbox.right / TILE_SIZE);
+    const top = Math.floor(hitbox.top / TILE_SIZE);
+    const bottom = Math.floor(hitbox.bottom / TILE_SIZE);
+    const cells = [
+      { x: left, y: top },
+      { x: right, y: top },
+      { x: left, y: bottom },
+      { x: right, y: bottom },
+    ];
+
+    return cells.find((cell) => this.getTile(cell.x, cell.y) === TILE.STAIRS) ?? null;
   }
 
   canOccupyPixel(px, py) {
