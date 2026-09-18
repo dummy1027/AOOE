@@ -100,7 +100,7 @@ const SECOND_FLOOR_MAP = [
 const SPAWN = { x: 2, y: 1 };
 const EXIT_POSITION = { x: 28, y: 28 };
 const MONSTER_SPAWN = { x: 15, y: 12 };
-const SECOND_FLOOR_SPAWN = { x: 27, y: 6 };
+const SECOND_FLOOR_SPAWN = { x: 28, y: 7 };
 
 // ============================================================
 // 회사 테마: 문 & 카드키 정의
@@ -1172,7 +1172,7 @@ export class EscapeGame {
 
       // 이동 중이 아니면 즉시 이동
     } else if (key === this.controls.interact) {
-      this.interact();
+      this.useHeldItem();
     }
 
     this.updateStatus();
@@ -1391,7 +1391,7 @@ export class EscapeGame {
 
     const requiredKey = doorDef ? doorDef.keyName : "카드키";
     const doorName   = doorDef ? doorDef.name   : "보안문";
-    const hasKey = this.heldItem === requiredKey || this.inventory.includes(requiredKey);
+    const hasKey = this.heldItem === requiredKey;
 
     if (!hasKey) {
       this.message = `🔒 [${doorName}] 카드 인증 실패. [${requiredKey}]가 필요합니다.`;
@@ -1400,11 +1400,8 @@ export class EscapeGame {
 
     // 카드키 소모 (주손 → 보관함 순서로 제거)
     if (this.heldItem === requiredKey) {
-      this.heldItem = null;
-    } else {
-      const idx = this.inventory.indexOf(requiredKey);
-      if (idx !== -1) this.inventory.splice(idx, 1);
-    }
+  this.heldItem = null;
+}
 
     // ★ 같은 카드키를 공유하는 모든 문 타일 동시 개방
     const sameKeyDoors = DOORS.filter(
@@ -1426,6 +1423,25 @@ export class EscapeGame {
     this.message = `✅ [${requiredKey}] 인증 완료 — ${doorName} 개방${extraMsg}`;
     this.updateStatus();
   }
+
+  useHeldItem() {
+  // 주손에 아이템이 없으면 사용 불가
+  if (this.heldItem === null) {
+    this.message = "주손에 들고 있는 아이템이 없습니다.";
+    return;
+  }
+
+  const item = this.heldItem;
+
+  // 현재는 카드키만 사용 가능
+  if (item.includes("출입증") || item.includes("마스터키")) {
+    this.interact();
+    return;
+  }
+
+  // 나중에 다른 아이템이 추가되면 여기에 사용 효과를 추가하면 됨
+  this.message = `${item}은(는) 지금 사용할 수 없습니다.`;
+}
 
   getTile(x, y) {
     return this.map[y]?.[x];
