@@ -198,11 +198,11 @@ const KEYS = [
   // 2층 카드키
   { floor: 1, x: 2,  y: 2,  keyName: "이사실 출입증" },
   { floor: 1, x: 22, y: 14, keyName: "연구소 출입증" },
-  { floor: 0, x: 10, y: 17, keyName: "지하창고 출입증" },
+  { floor: 1, x: 25, y: 26, keyName: "지하창고 출입증" }, //0 10 17
   { floor: 1, x: 7,  y: 14, keyName: "자료실 출입증" },
   { floor: 1, x: 3,  y: 24, keyName: "보안구역 출입증" },
   { floor: 1, x: 17, y: 26, keyName: "CEO실 마스터키" },
-  { floor: 1, x: 25, y: 26, keyName: "회의실 출입증" },
+  { floor: 0, x: 10, y: 17, keyName: "회의실 출입증" },
 ];
 
 export class EscapeGame {
