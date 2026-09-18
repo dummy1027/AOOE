@@ -1202,19 +1202,35 @@ export class EscapeGame {
     if (this.ended || this.paused) return;
     if (this.heldDirections.size === 0) return;
 
-    const key = Array.from(this.heldDirections).at(-1);
-    const direction = this.directionForKey(key);
+    let x = 0;
+    let y = 0;
+    for (const key of this.heldDirections) {
+      const direction = this.directionForKey(key);
+      if (direction) {
+        x += direction.x;
+        y += direction.y;
+      }
+    }
 
-    if (!direction) return;
+    if (x === 0 && y === 0) {
+      const direction = this.directionForKey(this.lastPressedDirection);
+      if (!direction) return;
+      x = direction.x;
+      y = direction.y;
+    }
 
-    // 현재 누르고 있는 방향을 바라봄
-    this.player.direction = direction.sprite;
+    const length = Math.hypot(x, y);
+    x /= length;
+    y /= length;
+
+    const facingDirection = this.directionForKey(this.lastPressedDirection);
+    if (facingDirection) this.player.direction = facingDirection.sprite;
 
     // 실제 연속 이동
     const distance = this.player.speed * p.deltaTime / 1000;
 
-    const dx = direction.x * distance;
-    const dy = direction.y * distance;
+    const dx = x * distance;
+    const dy = y * distance;
 
     this.movePlayerContinuous(dx, dy);
   }
