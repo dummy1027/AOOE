@@ -20,6 +20,7 @@ const TILE = {
   BOOKSHELF: 7,
   DROPPED_ITEM: 8,
   EASTER_EGG_ITEM: 9,
+  BOOKSHELF_HINT: 10,
 };
 
 const DIRECTIONS = [
@@ -196,12 +197,11 @@ const KEYS = [
   { floor: 0, x: 1,  y: 18, keyName: "도서실 키카드"},
 
   // 2층 카드키
-  { floor: 1, x: 2,  y: 2,  keyName: "이사실 출입증" },
+  { floor: 2, x: 27, y: 20,  keyName: "이사실 출입증" },
   { floor: 1, x: 22, y: 14, keyName: "연구소 출입증" },
   { floor: 1, x: 25, y: 26, keyName: "지하창고 출입증" }, //0 10 17
   { floor: 1, x: 7,  y: 14, keyName: "자료실 출입증" },
   { floor: 1, x: 3,  y: 24, keyName: "보안구역 출입증" },
-  { floor: 1, x: 17, y: 26, keyName: "CEO실 마스터키" },
   { floor: 0, x: 10, y: 17, keyName: "회의실 출입증" },
 ];
 
@@ -235,6 +235,7 @@ export class EscapeGame {
     for (const k of this.placedKeys) {
       this.floorMaps[k.floor][k.y][k.x] = TILE.KEY;
     }
+    this.floorMaps[1][26][17] = TILE.BOOKSHELF_HINT;
     if (!preserveMascot) {
       this.floorMaps[EASTER_EGG_ITEM_POSITION.floor][EASTER_EGG_ITEM_POSITION.y][EASTER_EGG_ITEM_POSITION.x] = TILE.EASTER_EGG_ITEM;
     }
@@ -285,6 +286,8 @@ export class EscapeGame {
     this.easterEggDoorSequence = 0;
     this.easterEggDoorArmed = false;
     this.specialDoorPosition = null;
+    this.designatedBookshelf = this.chooseDesignatedBookshelf();
+    this.bookshelfHintFound = false;
 
     this.inventoryOpen = false;
     this.inventoryDrag = null;
@@ -325,6 +328,16 @@ export class EscapeGame {
   getInventoryCapacity() {
     const hasMascot = this.heldItem === EASTER_EGG_ITEM_NAME || this.inventory.includes(EASTER_EGG_ITEM_NAME);
     return hasMascot ? 7 : 6;
+  }
+
+  chooseDesignatedBookshelf() {
+    const candidates = [];
+    THIRD_FLOOR_MAP.forEach((row, y) => row.forEach((tile, x) => {
+      if (tile === TILE.BOOKSHELF && x > 1 && x < 28 && y > 1 && y < 25) {
+        candidates.push({ x, y });
+      }
+    }));
+    return candidates[Math.floor(Math.random() * candidates.length)];
   }
 
   closeInventory() {
@@ -497,6 +510,7 @@ export class EscapeGame {
       7: [169, 171, 0],
       8: [165, 125, 75],
       9: [180, 85, 155],
+      10: [210, 190, 80],
     };
 
     this.map.forEach((row, y) => {
@@ -564,6 +578,18 @@ export class EscapeGame {
           p.fill(45, 25, 45);
           p.circle(px + 27, py + 32, 3);
           p.circle(px + 37, py + 32, 3);
+          p.pop();
+        }
+
+        if (tile === TILE.BOOKSHELF_HINT) {
+          p.push();
+          p.noStroke();
+          p.fill(35, 35, 20);
+          p.rect(px + 14, py + 14, 36, 36, 4);
+          p.fill(255, 230, 100);
+          p.textAlign(p.CENTER, p.CENTER);
+          p.textSize(22);
+          p.text("?", px + 32, py + 32);
           p.pop();
         }
       });
@@ -1697,6 +1723,14 @@ export class EscapeGame {
       return;
     }
 
+    if (tile === TILE.BOOKSHELF_HINT && !this.bookshelfHintFound) {
+      this.bookshelfHintFound = true;
+      this.map[cell.y][cell.x] = TILE.FLOOR;
+      this.message = `힌트: 3층 책장 좌표는 (${this.designatedBookshelf.x}, ${this.designatedBookshelf.y})입니다.`;
+      this.updateStatus();
+      return;
+    }
+
     if (tile === TILE.EASTER_EGG_ITEM) {
       if (this.heldItem === null) {
         this.heldItem = EASTER_EGG_ITEM_NAME;
@@ -1821,7 +1855,7 @@ export class EscapeGame {
     // 바라보는 방향 바로 앞
     const pX = centerX + direction.x;
     const pY = centerY + direction.y;
-    if (this.getTile(pX, pY) === TILE.LOCKED_DOOR) {
+    if ([TILE.LOCKED_DOOR, TILE.BOOKSHELF, TILE.BOOKSHELF_HINT].includes(this.getTile(pX, pY))) {
       return { x: pX, y: pY };
     }
 
@@ -2000,6 +2034,34 @@ export class EscapeGame {
       return;
     }
 
+    if (this.getTile(target.x, target.y) === TILE.BOOKSHELF_HINT) {
+      this.bookshelfHintFound = true;
+      this.map[target.y][target.x] = TILE.FLOOR;
+      this.message = `힌트: 3층 책장 좌표는 (${this.designatedBookshelf.x}, ${this.designatedBookshelf.y})입니다.`;
+      this.updateStatus();
+      return;
+    }
+
+    if (this.getTile(target.x, target.y) === TILE.BOOKSHELF) {
+      if (this.currentFloor !== 2 || target.x !== this.designatedBookshelf.x || target.y !== this.designatedBookshelf.y) {
+        this.message = "이 책장에서는 특별한 것을 찾을 수 없습니다.";
+        return;
+      }
+
+      const keyName = "CEO실 마스터키";
+      if (this.heldItem === null) {
+        this.heldItem = keyName;
+      } else if (this.inventory.length < this.getInventoryCapacity()) {
+        this.inventory.push(keyName);
+      } else {
+        this.message = "보관함이 가득 차서 CEO실 마스터키를 얻을 수 없습니다.";
+        return;
+      }
+      this.message = "책장 안에서 CEO실 마스터키를 찾았습니다.";
+      this.updateStatus();
+      return;
+    }
+
     // 눌린 문 타일이 속한 문 정의 탐색
     const doorDef = DOORS.find(
       (d) =>
@@ -2043,9 +2105,13 @@ export class EscapeGame {
   }
 
   useHeldItem() {
-  // 주손에 아이템이 없으면 사용 불가
   if (this.heldItem === null) {
-    this.message = "주손에 들고 있는 아이템이 없습니다.";
+    const target = this.getInteractTargetTile();
+    if (target && [TILE.BOOKSHELF, TILE.BOOKSHELF_HINT].includes(this.getTile(target.x, target.y))) {
+      this.interact();
+    } else {
+      this.message = "주손에 들고 있는 아이템이 없습니다.";
+    }
     return;
   }
 
