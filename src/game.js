@@ -17,6 +17,7 @@ const TILE = {
   EXIT: 4,
   OPEN_DOOR: 5,
   STAIRS: 6,
+  EASTER_EGG_ITEM: 7,
 };
 
 const DIRECTIONS = [
@@ -102,6 +103,9 @@ const SPAWN = { x: 2, y: 1 };
 const EXIT_POSITION = { x: 28, y: 28 };
 const MONSTER_SPAWN = { x: 15, y: 12 };
 const SECOND_FLOOR_SPAWN = { x: 28, y: 7 };
+const EASTER_EGG_ITEM_NAME = "폐회사의 가방 마스코트 인형";
+const EASTER_EGG_ITEM_POSITION = { floor: 2, x: 4, y: 2 };
+const EASTER_EGG_ROOM_ENTRY = { x: 4, y: 6 };
 
 // ============================================================
 // 회사 테마: 문 & 카드키 정의
@@ -161,19 +165,23 @@ export class EscapeGame {
     );
   }
 
-  resetState() {
+  resetState(preserveMascot = false, mascotInInventory = false) {
     this.currentFloor = 0;
 
     // 층별 독립 맵 복사본 생성 (층 이동 시에도 열린 문과 열쇠 상태 보존)
     this.floorMaps = [
       INITIAL_MAP.map((row) => [...row]),
       SECOND_FLOOR_MAP.map((row) => [...row]),
+      this.createEasterEggFloor(),
     ];
 
     // 열쇠 배치 초기화
     this.placedKeys = KEYS.map((k) => ({ ...k, taken: false }));
     for (const k of this.placedKeys) {
       this.floorMaps[k.floor][k.y][k.x] = TILE.KEY;
+    }
+    if (!preserveMascot) {
+      this.floorMaps[EASTER_EGG_ITEM_POSITION.floor][EASTER_EGG_ITEM_POSITION.y][EASTER_EGG_ITEM_POSITION.x] = TILE.EASTER_EGG_ITEM;
     }
 
     // 출구 설정
@@ -201,6 +209,14 @@ export class EscapeGame {
 
     this.inventory = [];
     this.heldItem = null;
+    this.easterEggItemObtained = preserveMascot;
+    if (preserveMascot) {
+      if (mascotInInventory) {
+        this.inventory.push(EASTER_EGG_ITEM_NAME);
+      } else {
+        this.heldItem = EASTER_EGG_ITEM_NAME;
+      }
+    }
 
     // 현재 누르고 있는 방향
     this.heldDirections = new Set();
@@ -208,6 +224,10 @@ export class EscapeGame {
     this.developerUnlockTriggered = false;
     this.developerInteractHeld = false;
     this.developerFrontDoorSequence = 0;
+    this.easterEggDoorKeyHeld = false;
+    this.easterEggDoorSequence = 0;
+    this.easterEggDoorArmed = false;
+    this.specialDoorPosition = null;
 
     this.inventoryOpen = false;
 
@@ -221,8 +241,38 @@ export class EscapeGame {
     this.message = "[안내] 카드키를 획득하여 보안문을 개방하고 건물을 탈출하세요. (E: 상호작용 / F: 인벤토리)";
   }
 
+  createEasterEggRoom(map) {
+    const left = 2;
+    const top = 1;
+    const width = 5;
+    const height = 7;
+    const entranceX = left + 2;
+
+    for (let y = top; y < top + height; y++) {
+      for (let x = left; x < left + width; x++) {
+        const isWall = x === left || x === left + width - 1 || y === top || y === top + height - 1;
+        map[y][x] = isWall ? TILE.WALL : TILE.FLOOR;
+      }
+    }
+
+    map[top + height - 1][entranceX] = TILE.FLOOR;
+  }
+
+  createEasterEggFloor() {
+    const map = Array.from({ length: 9 }, () => Array(9).fill(TILE.WALL));
+    this.createEasterEggRoom(map);
+    return map;
+  }
+
+  getInventoryCapacity() {
+    const hasMascot = this.heldItem === EASTER_EGG_ITEM_NAME || this.inventory.includes(EASTER_EGG_ITEM_NAME);
+    return hasMascot ? 7 : 6;
+  }
+
   restart() {
-    this.resetState();
+    const mascotInInventory = this.inventory?.includes(EASTER_EGG_ITEM_NAME) ?? false;
+    const preserveMascot = this.easterEggItemObtained || mascotInInventory || this.heldItem === EASTER_EGG_ITEM_NAME;
+    this.resetState(preserveMascot, mascotInInventory);
     this.updateStatus();
   }
 
@@ -233,6 +283,8 @@ export class EscapeGame {
     this.developerUnlockTriggered = false;
     this.developerInteractHeld = false;
     this.developerFrontDoorSequence = 0;
+    this.easterEggDoorKeyHeld = false;
+    this.easterEggDoorSequence = 0;
     this.sketch?.noLoop();
   }
   resume() { if (!this.ended) { this.paused = false; this.sketch?.loop(); } }
@@ -269,7 +321,7 @@ export class EscapeGame {
     p.keyPressed = (event) => {
       const key = event?.key?.toLowerCase() ?? p.key.toLowerCase();
       if (event?.repeat && this.heldDirections.has(key)) return false;
-      if (event?.repeat && (key === "e" || /^[1-3]$/.test(key))) return false;
+      if (event?.repeat && (key === "b" || key === "e" || /^[1-7]$/.test(key))) return false;
       this.handleKey(p, key);
       return false;
     };
@@ -353,6 +405,7 @@ export class EscapeGame {
       4: [35, 180, 100],
       5: [145, 97, 48],
       6: [54, 105, 155],
+      7: [180, 85, 155],
     };
 
     this.map.forEach((row, y) => {
@@ -387,6 +440,19 @@ export class EscapeGame {
             p.line(px + 12, py + 16 + i * 11, px + 52, py + 16 + i * 11);
           }
           p.strokeWeight(1);
+        }
+
+        if (tile === TILE.EASTER_EGG_ITEM) {
+          p.push();
+          p.noStroke();
+          p.fill(240, 170, 205);
+          p.ellipse(px + 32, py + 34, 28, 24);
+          p.circle(px + 24, py + 22, 12);
+          p.circle(px + 40, py + 22, 12);
+          p.fill(45, 25, 45);
+          p.circle(px + 27, py + 32, 3);
+          p.circle(px + 37, py + 32, 3);
+          p.pop();
         }
       });
     });
@@ -758,7 +824,7 @@ export class EscapeGame {
     );
 
     // =========================
-    // 오른쪽 : 6칸 인벤토리
+    // 오른쪽 : 인벤토리
     // =========================
     const inventoryX = dividerX + 30;
     const inventoryY = panelY + 95;
@@ -775,7 +841,7 @@ export class EscapeGame {
     p.textAlign(p.LEFT, p.CENTER);
     p.textSize(18);
     p.text(
-      "보관함  6칸",
+      `보관함  ${this.getInventoryCapacity()}칸`,
       inventoryX,
       inventoryY - 35
     );
@@ -783,8 +849,9 @@ export class EscapeGame {
     // =========================
     // 2 x 3 슬롯
     // =========================
+    const slotCount = this.getInventoryCapacity();
     const columns = 3;
-    const rows = 2;
+    const rows = Math.ceil(slotCount / columns);
     const gap = 12;
 
     const slotSize = Math.min(
@@ -800,7 +867,7 @@ export class EscapeGame {
 
     const startY = inventoryY;
 
-    for (let index = 0; index < 6; index++) {
+    for (let index = 0; index < slotCount; index++) {
       const column = index % columns;
       const row = Math.floor(index / columns);
 
@@ -858,7 +925,7 @@ export class EscapeGame {
     p.textSize(13);
 
     p.text(
-      "1-6 또는 슬롯 클릭 · F 키로 닫기",
+      `1-${slotCount} 또는 슬롯 클릭 · F 키로 닫기`,
       panelX + panelWidth / 2,
       panelY + panelHeight - 18
     );
@@ -886,16 +953,18 @@ export class EscapeGame {
     const inventoryY = panelY + 95;
     const inventoryWidth = panelX + panelWidth - inventoryX - 30;
     const inventoryHeight = panelHeight - 145;
+    const slotCount = this.getInventoryCapacity();
+    const rows = Math.ceil(slotCount / 3);
     const gap = 12;
     const slotSize = Math.min(
       (inventoryWidth - gap * 2) / 3,
-      (inventoryHeight - gap) / 2
+      (inventoryHeight - gap * (rows - 1)) / rows
     );
     const startX = inventoryX + (inventoryWidth - (slotSize * 3 + gap * 2)) / 2;
 
     return {
       handSlot,
-      slots: Array.from({ length: 6 }, (_, index) => ({
+      slots: Array.from({ length: slotCount }, (_, index) => ({
         x: startX + (index % 3) * (slotSize + gap),
         y: inventoryY + Math.floor(index / 3) * (slotSize + gap),
         size: slotSize,
@@ -913,7 +982,7 @@ export class EscapeGame {
     if (contains(handSlot)) {
       if (!this.heldItem) {
         this.message = "주손이 비어 있습니다.";
-      } else if (this.inventory.length >= 6) {
+      } else if (this.inventory.length >= this.getInventoryCapacity()) {
         this.message = "보관함이 가득 차서 주손 아이템을 넣을 수 없습니다.";
       } else {
         this.inventory.push(this.heldItem);
@@ -1166,6 +1235,29 @@ export class EscapeGame {
 
     if (key === "e") {
       this.developerInteractHeld = true;
+      if (this.easterEggDoorArmed) {
+        this.tryEasterEggDoor();
+        return false;
+      }
+    }
+
+    if (key === "b") {
+      this.easterEggDoorKeyHeld = true;
+      return false;
+    }
+
+    if (!this.easterEggItemObtained && this.easterEggDoorKeyHeld && /^[1-7]$/.test(key)) {
+      const sequence = ["3", "2", "7"];
+      const expectedKey = sequence[this.easterEggDoorSequence];
+      this.easterEggDoorSequence = key === expectedKey
+        ? this.easterEggDoorSequence + 1
+        : 0;
+
+      if (this.easterEggDoorSequence === sequence.length) {
+        this.createSpecialDoor();
+        this.easterEggDoorSequence = 0;
+      }
+      return false;
     }
 
     if (this.developerInteractHeld && /^[1-3]$/.test(key)) {
@@ -1193,7 +1285,7 @@ export class EscapeGame {
     }
 
     if (this.inventoryOpen) {
-      if (/^[1-6]$/.test(key)) {
+      if (/^[1-7]$/.test(key)) {
         this.equipInventorySlot(Number(key) - 1);
       }
 
@@ -1232,6 +1324,11 @@ export class EscapeGame {
     if (key === "e") {
       this.developerInteractHeld = false;
       this.developerFrontDoorSequence = 0;
+    }
+
+    if (key === "b") {
+      this.easterEggDoorKeyHeld = false;
+      this.easterEggDoorSequence = 0;
     }
 
     // 키를 떼면 반드시 제거
@@ -1326,6 +1423,24 @@ export class EscapeGame {
       this.stairTransitionLocked = false;
     }
 
+    if (tile === TILE.EASTER_EGG_ITEM) {
+      if (this.heldItem === null) {
+        this.heldItem = EASTER_EGG_ITEM_NAME;
+      } else if (this.inventory.length < this.getInventoryCapacity()) {
+        this.inventory.push(EASTER_EGG_ITEM_NAME);
+      } else {
+        this.message = "보관함이 가득 차서 마스코트 인형을 주울 수 없습니다.";
+        return;
+      }
+
+      this.easterEggItemObtained = true;
+      this.map[cell.y][cell.x] = TILE.FLOOR;
+      this.message = `${EASTER_EGG_ITEM_NAME}을(를) 획득했습니다. 보관함이 1칸 늘어났습니다.`;
+      this.updateStatus();
+      this.returnFromEasterEggRoom();
+      return;
+    }
+
     // 열쇠 획득 판정
     if (tile === TILE.KEY) {
       const keyObj = this.placedKeys.find(
@@ -1333,7 +1448,7 @@ export class EscapeGame {
       );
       const keyName = keyObj ? keyObj.keyName : "열쇠";
 
-      if (this.inventory.length >= 6 && this.heldItem !== null) {
+      if (this.inventory.length >= this.getInventoryCapacity() && this.heldItem !== null) {
         this.message = "보관함이 가득 차서 열쇠를 주울 수 없습니다.";
       } else {
         if (this.heldItem === null) {
@@ -1499,6 +1614,84 @@ export class EscapeGame {
     }
 
     this.message = `개발자 모드: 앞의 문을 개방했습니다. (${openedCount}칸)`;
+    this.updateStatus();
+  }
+
+  createSpecialDoor() {
+    if (this.specialDoorPosition) {
+      const { floor, x, y } = this.specialDoorPosition;
+      if (this.floorMaps[floor]?.[y]?.[x] === TILE.LOCKED_DOOR) {
+        this.floorMaps[floor][y][x] = TILE.FLOOR;
+      }
+      this.specialDoorPosition = null;
+      this.easterEggDoorArmed = false;
+    }
+
+    const cell = this.getActorCell(this.player);
+    const doorPosition = { floor: this.currentFloor, x: cell.x, y: cell.y - 1 };
+
+    if (this.getTile(doorPosition.x, doorPosition.y) !== TILE.FLOOR) {
+      this.message = "개발자 모드: 플레이어 위에 빈 공간이 필요합니다.";
+      this.updateStatus();
+      return;
+    }
+
+    this.map[doorPosition.y][doorPosition.x] = TILE.LOCKED_DOOR;
+    this.specialDoorPosition = doorPosition;
+    this.easterEggDoorArmed = true;
+    this.message = "개발자 모드: 위쪽 공간에 특수문이 나타났습니다.";
+    this.updateStatus();
+  }
+
+  tryEasterEggDoor() {
+    const cell = this.getActorCell(this.player);
+    const isDoorAbove = this.easterEggDoorArmed &&
+      this.specialDoorPosition &&
+      this.specialDoorPosition.floor === this.currentFloor &&
+      this.specialDoorPosition.x === cell.x &&
+      this.specialDoorPosition.y === cell.y - 1 &&
+      this.getTile(cell.x, cell.y - 1) === TILE.LOCKED_DOOR;
+
+    if (!isDoorAbove) {
+      this.message = "개발자 모드: 위에 특수문이 없습니다.";
+      this.updateStatus();
+      return false;
+    }
+
+    this.currentFloor = EASTER_EGG_ITEM_POSITION.floor;
+    this.map = this.floorMaps[this.currentFloor];
+    this.player = this.createActor(
+      EASTER_EGG_ROOM_ENTRY.x,
+      EASTER_EGG_ROOM_ENTRY.y,
+      "S",
+      PLAYER_SPEED_PX
+    );
+    this.easterEggDoorArmed = false;
+    this.heldDirections.clear();
+    this.lastPressedDirection = null;
+    this.message = "이스터에그 공간으로 이동했습니다.";
+    this.updateStatus();
+    return true;
+  }
+
+  returnFromEasterEggRoom() {
+    if (this.specialDoorPosition) {
+      const { floor, x, y } = this.specialDoorPosition;
+      if (this.floorMaps[floor]?.[y]?.[x] === TILE.LOCKED_DOOR) {
+        this.floorMaps[floor][y][x] = TILE.FLOOR;
+      }
+    }
+
+    this.currentFloor = 0;
+    this.map = this.floorMaps[0];
+    this.player = this.createActor(SPAWN.x, SPAWN.y, "S", PLAYER_SPEED_PX);
+    this.easterEggDoorArmed = false;
+    this.specialDoorPosition = null;
+    this.easterEggDoorKeyHeld = false;
+    this.easterEggDoorSequence = 0;
+    this.heldDirections.clear();
+    this.lastPressedDirection = null;
+    this.message = `${EASTER_EGG_ITEM_NAME}을(를) 획득했습니다. 스폰 지점으로 돌아왔습니다.`;
     this.updateStatus();
   }
 
