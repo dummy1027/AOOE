@@ -272,6 +272,13 @@ export class EscapeGame {
     return hasMascot ? 7 : 6;
   }
 
+  closeInventory() {
+    if (!this.inventoryOpen) return false;
+    this.inventoryOpen = false;
+    this.updateStatus();
+    return true;
+  }
+
   getDroppedItemAt(floor, x, y) {
     return this.droppedItems.find(
       (item) => item.floor === floor && item.x === x && item.y === y
