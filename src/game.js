@@ -206,6 +206,8 @@ export class EscapeGame {
     this.heldDirections = new Set();
     this.heldDeveloperKeys = new Set();
     this.developerUnlockTriggered = false;
+    this.developerInteractHeld = false;
+    this.developerFrontDoorSequence = 0;
 
     this.inventoryOpen = false;
 
@@ -229,6 +231,8 @@ export class EscapeGame {
     this.heldDirections.clear();
     this.heldDeveloperKeys.clear();
     this.developerUnlockTriggered = false;
+    this.developerInteractHeld = false;
+    this.developerFrontDoorSequence = 0;
     this.sketch?.noLoop();
   }
   resume() { if (!this.ended) { this.paused = false; this.sketch?.loop(); } }
@@ -265,6 +269,7 @@ export class EscapeGame {
     p.keyPressed = (event) => {
       const key = event?.key?.toLowerCase() ?? p.key.toLowerCase();
       if (event?.repeat && this.heldDirections.has(key)) return false;
+      if (event?.repeat && (key === "e" || /^[1-3]$/.test(key))) return false;
       this.handleKey(p, key);
       return false;
     };
@@ -1159,6 +1164,23 @@ export class EscapeGame {
       return false;
     }
 
+    if (key === "e") {
+      this.developerInteractHeld = true;
+    }
+
+    if (this.developerInteractHeld && /^[1-3]$/.test(key)) {
+      const expectedKey = String(this.developerFrontDoorSequence + 1);
+      this.developerFrontDoorSequence = key === expectedKey
+        ? this.developerFrontDoorSequence + 1
+        : 0;
+
+      if (this.developerFrontDoorSequence === 3) {
+        this.unlockFrontDoor();
+        this.developerFrontDoorSequence = 0;
+      }
+      return false;
+    }
+
     if (key === this.controls.inventory) {
       this.inventoryOpen = !this.inventoryOpen;
 
@@ -1205,6 +1227,11 @@ export class EscapeGame {
     if (DEVELOPER_KEYS.has(key)) {
       this.heldDeveloperKeys.delete(key);
       this.developerUnlockTriggered = false;
+    }
+
+    if (key === "e") {
+      this.developerInteractHeld = false;
+      this.developerFrontDoorSequence = 0;
     }
 
     // 키를 떼면 반드시 제거
@@ -1447,6 +1474,31 @@ export class EscapeGame {
 
     this.map = this.floorMaps[this.currentFloor];
     this.message = `개발자 모드: 잠긴 문 ${openedCount}개를 모두 개방했습니다.`;
+    this.updateStatus();
+  }
+
+  unlockFrontDoor() {
+    const target = this.getInteractTargetTile();
+    const door = target && DOORS.find(
+      (doorDefinition) =>
+        doorDefinition.floor === this.currentFloor &&
+        doorDefinition.tiles.some((tile) => tile.x === target.x && tile.y === target.y)
+    );
+
+    if (!door) {
+      this.message = "개발자 모드: 앞에 잠긴 문이 없습니다.";
+      return;
+    }
+
+    let openedCount = 0;
+    for (const tile of door.tiles) {
+      if (this.map[tile.y][tile.x] === TILE.LOCKED_DOOR) {
+        this.map[tile.y][tile.x] = TILE.OPEN_DOOR;
+        openedCount++;
+      }
+    }
+
+    this.message = `개발자 모드: 앞의 문을 개방했습니다. (${openedCount}칸)`;
     this.updateStatus();
   }
 
