@@ -3,6 +3,7 @@ const MOVE_FRAMES = 12;
 const SPRITE_FRAMES = 4;
 
 const MONSTER_MOVE_INTERVAL = 180;
+const MONSTER_STAIR_DELAY_PER_TILE = 180;
 
 const PLAYER_SPEED_PX = 365;
 const MONSTER_SPEED_PX = 170;
@@ -260,8 +261,10 @@ export class EscapeGame {
         MONSTER_SPEED_PX
       ),
       active: false,
+      floor: 0,
       nextMoveAt: 1000,
     };
+    this.monsterTransition = null;
 
     this.inventory = [];
     this.heldItem = null;
@@ -483,6 +486,8 @@ export class EscapeGame {
     this.drawMonster(p);
 
     p.pop();
+
+    this.drawFlashlight(p, p.width / 2, p.height / 2);
 
     this.drawMessage(p);
 
@@ -1384,7 +1389,18 @@ export class EscapeGame {
   }
 
   drawMonster(p) {
-    if (!this.monster.active || this.ended) {
+    if (this.monsterTransition && p.millis() >= this.monsterTransition.arrivesAt) {
+      const { x, y, floor } = this.monsterTransition;
+      this.monster = {
+        ...this.createActor(x, y, "S", MONSTER_SPEED_PX),
+        active: true,
+        floor,
+        nextMoveAt: p.millis() + MONSTER_MOVE_INTERVAL,
+      };
+      this.monsterTransition = null;
+    }
+
+    if (!this.monster.active || this.monster.floor !== this.currentFloor || this.ended) {
       return;
     }
 
@@ -1783,6 +1799,7 @@ export class EscapeGame {
   changeFloor(stairCell = this.getActorCell(this.player)) {
     if (this.currentFloor === 3) return;
 
+    const previousFloor = this.currentFloor;
     const cell = stairCell;
     let nextFloor;
     let spawn;
@@ -1808,9 +1825,19 @@ export class EscapeGame {
     this.player = this.createActor(spawn.x, spawn.y, "S", PLAYER_SPEED_PX);
     this.message = `${nextFloor + 1}층으로 이동했습니다.`;
 
+    if (this.monster.active) {
+      const distanceToStairs = Math.abs(this.monster.x - cell.x) + Math.abs(this.monster.y - cell.y);
+      this.monsterTransition = {
+        x: spawn.x,
+        y: spawn.y,
+        floor: nextFloor,
+        arrivesAt: this.sketch.millis() + distanceToStairs * MONSTER_STAIR_DELAY_PER_TILE,
+      };
+      this.monster.active = false;
+    }
+
     this.heldDirections.clear();
     this.lastPressedDirection = null;
-    this.monster.active = false;
     this.updateStatus();
   }
 
@@ -2095,6 +2122,15 @@ export class EscapeGame {
           openedCount++;
         }
       }
+    }
+
+    if (!this.monster.active) {
+      this.monster = {
+        ...this.createActor(18, 1, "S", MONSTER_SPEED_PX),
+        active: true,
+        floor: this.currentFloor,
+        nextMoveAt: this.sketch.millis() + MONSTER_MOVE_INTERVAL,
+      };
     }
 
     const extraMsg = sameKeyDoors.length > 1
