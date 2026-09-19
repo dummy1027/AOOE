@@ -12,9 +12,9 @@ const SPRITE_FOLDER = "images/";
 
 const FLASHLIGHT_DIAMETER = 100;
 const FLASHLIGHT_RADIUS = FLASHLIGHT_DIAMETER / 2;
+const FLASHLIGHT_RANGE = 360;
 const FLASHLIGHT_HALF_ANGLE = Math.PI / 5;
 const FLASHLIGHT_RAY_COUNT = 40;
-const FLASHLIGHT_RANGE = 360;
 const FLASHLIGHT_STEP = 4;
 
 const TILE = {
@@ -2288,48 +2288,63 @@ export class EscapeGame {
   }
 
  drawFlashlight(p, lightX, lightY) {
-  const context = p.drawingContext;
+  const ctx = p.drawingContext;
 
-  // 플레이어의 실제 월드 좌표
-  const playerWorldX = this.player.px + TILE_SIZE / 2;
-  const playerWorldY = this.player.py + TILE_SIZE / 2;
+  const direction = DIRECTIONS.find(
+    (item) => item.sprite === this.player.direction
+  );
 
-  // 플레이어가 바라보는 방향
-  const direction = {
+  if (!direction) return;
+
+  const angleMap = {
     W: -Math.PI / 2,
     A: Math.PI,
     S: Math.PI / 2,
     D: 0,
-  }[this.player.direction] ?? 0;
+  };
 
-  const startAngle = direction - FLASHLIGHT_HALF_ANGLE;
-  const endAngle = direction + FLASHLIGHT_HALF_ANGLE;
+  const directionAngle = angleMap[direction.sprite];
 
-  // 월드 → 화면 좌표 변환
-  const cameraX = lightX - playerWorldX;
-  const cameraY = lightY - playerWorldY;
+  const startAngle =
+    directionAngle - FLASHLIGHT_HALF_ANGLE;
 
-  const rayPoints = [];
+  const endAngle =
+    directionAngle + FLASHLIGHT_HALF_ANGLE;
+
+  // 플레이어의 실제 월드 중심
+  const playerWorldX =
+    this.player.px + TILE_SIZE / 2;
+
+  const playerWorldY =
+    this.player.py + TILE_SIZE / 2;
+
+  const points = [];
 
   for (let i = 0; i <= FLASHLIGHT_RAY_COUNT; i++) {
     const angle =
       startAngle +
-      (endAngle - startAngle) * (i / FLASHLIGHT_RAY_COUNT);
+      (endAngle - startAngle) *
+      (i / FLASHLIGHT_RAY_COUNT);
 
     let distance = FLASHLIGHT_RADIUS;
 
     while (distance < FLASHLIGHT_RANGE) {
       const worldX =
-        playerWorldX + Math.cos(angle) * distance;
-      const worldY =
-        playerWorldY + Math.sin(angle) * distance;
+        playerWorldX +
+        Math.cos(angle) * distance;
 
-      const tileX = Math.floor(worldX / TILE_SIZE);
-      const tileY = Math.floor(worldY / TILE_SIZE);
+      const worldY =
+        playerWorldY +
+        Math.sin(angle) * distance;
+
+      const tileX =
+        Math.floor(worldX / TILE_SIZE);
+
+      const tileY =
+        Math.floor(worldY / TILE_SIZE);
 
       const tile = this.getTile(tileX, tileY);
 
-      // 벽 / 책장 / 잠긴 문에서 빛 차단
       if (
         tile === undefined ||
         tile === TILE.WALL ||
@@ -2342,27 +2357,33 @@ export class EscapeGame {
       distance += FLASHLIGHT_STEP;
     }
 
-    rayPoints.push({
+    points.push({
       x: lightX + Math.cos(angle) * distance,
       y: lightY + Math.sin(angle) * distance,
     });
   }
 
-  context.save();
+  ctx.save();
 
-  // 화면 전체 어둡게
-  context.fillStyle = "rgba(0, 0, 0, 0.82)";
-  context.beginPath();
+  // 전체 화면 어둡게
+  ctx.fillStyle = "rgba(0, 0, 0, 0.82)";
 
-  context.rect(0, 0, p.width, p.height);
+  ctx.beginPath();
+
+  ctx.rect(
+    0,
+    0,
+    p.width,
+    p.height
+  );
 
   // 플레이어 주변 45px 원
-  context.moveTo(
+  ctx.moveTo(
     lightX + FLASHLIGHT_RADIUS,
     lightY
   );
 
-  context.arc(
+  ctx.arc(
     lightX,
     lightY,
     FLASHLIGHT_RADIUS,
@@ -2370,18 +2391,23 @@ export class EscapeGame {
     Math.PI * 2
   );
 
-  // 빛 원뿔
-  context.moveTo(lightX, lightY);
+  // 방향성 손전등
+// 원형 빛과 겹치지 않도록 원의 가장자리에서 시작
+ctx.moveTo(
+  lightX + Math.cos(startAngle) * FLASHLIGHT_RADIUS,
+  lightY + Math.sin(startAngle) * FLASHLIGHT_RADIUS
+);
 
-  for (const point of rayPoints) {
-    context.lineTo(point.x, point.y);
-  }
+for (const point of points) {
+  ctx.lineTo(point.x, point.y);
+}
 
-  context.closePath();
+ctx.lineTo(
+  lightX + Math.cos(endAngle) * FLASHLIGHT_RADIUS,
+  lightY + Math.sin(endAngle) * FLASHLIGHT_RADIUS
+);
 
-  context.fill("evenodd");
-
-  context.restore();
+ctx.closePath();
 }
 
   drawMessage(p) {
